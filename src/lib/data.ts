@@ -209,7 +209,7 @@ export const CLAIMS: Claim[] = SEQ.map((si, i) => {
   };
 });
 
-export const CABINET: Cabinet = { name: "Cabinet Atlas Assurances", address: "45 Boulevard d’Anfa", city: "Casablanca", phone: "05 22 47 85 10", email: "contact@atlas-assurances.ma", manager: "Salma Idrissi", ice: "001528745000062" };
+export const CABINET: Cabinet = { name: "Sanlam Assurances", address: "45 Boulevard d’Anfa", city: "Casablanca", phone: "05 22 47 85 10", email: "contact@atlas-assurances.ma", manager: "Salma Idrissi", ice: "001528745000062" };
 
 export const RULES: Rule[] = [
   { key: "devis", title: "Devis", condition: "Tant que le devis n’est ni accepté ni refusé.", enabled: true, steps: [{ label: "Première relance (après envoi)", value: 2, unit: "Jour" }, { label: "Deuxième relance (après envoi)", value: 5, unit: "Jour" }, { label: "Troisième relance (après envoi)", value: 10, unit: "Jour" }] },
