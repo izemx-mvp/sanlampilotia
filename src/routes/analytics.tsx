@@ -39,13 +39,13 @@ function Analytics() {
         <Card className="p-5" delay={0.05}>
           <h3 className="mb-4 font-semibold">Sinistres actifs par étape</h3>
           <div className="grid items-center gap-4 sm:grid-cols-2">
-            <ResponsiveContainer width="100%" height={220}><PieChart><Pie data={stages} dataKey="value" innerRadius={60} outerRadius={95} paddingAngle={3} stroke="none">{stages.map((_, i) => <Cell key={i} fill={COLORS[i]} />)}</Pie><Tooltip {...tip} /></PieChart></ResponsiveContainer>
-            <ul className="space-y-1.5 text-xs">{stages.map((s, i) => <li key={s.name} className="flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full" style={{ background: COLORS[i] }} /><span className="flex-1 text-muted-foreground">{s.name}</span><span className="font-semibold">{s.value}</span></li>)}</ul>
+            <ResponsiveContainer width="100%" height={220}><PieChart><Pie data={stages} dataKey="value" innerRadius={60} outerRadius={95} paddingAngle={3} stroke="none">{stages.map((_, i) => <Cell key={i} fill={COLORS[i]!} />)}</Pie><Tooltip {...tip} /></PieChart></ResponsiveContainer>
+            <ul className="space-y-1.5 text-xs">{stages.map((s, i) => <li key={s.name} className="flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full" style={{ background: COLORS[i]! }} /><span className="flex-1 text-muted-foreground">{s.name}</span><span className="font-semibold">{s.value}</span></li>)}</ul>
           </div>
         </Card>
         <Card className="p-5" delay={0.1}>
           <h3 className="mb-4 font-semibold">Sinistres bloqués par motif</h3>
-          <ResponsiveContainer width="100%" height={240}><BarChart data={blocked}><CartesianGrid stroke="var(--border)" vertical={false} /><XAxis dataKey="m" stroke="var(--muted-foreground)" fontSize={12} /><YAxis stroke="var(--muted-foreground)" fontSize={12} /><Tooltip {...tip} cursor={{ fill: "var(--accent)" }} /><Bar dataKey="v" name="Dossiers" radius={[8, 8, 0, 0]}>{blocked.map((_, i) => <Cell key={i} fill={COLORS[i]} />)}</Bar></BarChart></ResponsiveContainer>
+          <ResponsiveContainer width="100%" height={240}><BarChart data={blocked}><CartesianGrid stroke="var(--border)" vertical={false} /><XAxis dataKey="m" stroke="var(--muted-foreground)" fontSize={12} /><YAxis stroke="var(--muted-foreground)" fontSize={12} /><Tooltip {...tip} cursor={{ fill: "var(--accent)" }} /><Bar dataKey="v" name="Dossiers" radius={[8, 8, 0, 0]}>{blocked.map((_, i) => <Cell key={i} fill={COLORS[i]!} />)}</Bar></BarChart></ResponsiveContainer>
         </Card>
         <Card className="p-5" delay={0.15}>
           <h3 className="mb-4 font-semibold">Performance des opérateurs</h3>

@@ -101,7 +101,7 @@ const claimIssues = [
 ];
 
 export const claims: Claim[] = Array.from({ length: 30 }, (_, i) => {
-  let [issue, action] = pick(claimIssues);
+  let [issue = "", action = ""] = pick(claimIssues);
   let client = `${pick(first)} ${pick(last)}`;
   let id = `SIN-2026-${int(1000, 9899)}`;
   let garageId = pick(garages).id, expertId = pick(experts).id, stage = STAGES[i % 8]!;
@@ -152,7 +152,7 @@ export const history: HistoryItem[] = Array.from({ length: 40 }, (_, i) => {
     doc: ["Copie CIN reçue", "Rapport d’expertise ajouté"], ai: ["Agent IA : relance détectée", "Agent IA : priorité relevée à Haute", "Agent IA : tâche créée"], note: ["Note opérateur ajoutée"],
   };
   const isClaim = rnd() > 0.5;
-  return { id: `H-${i}`, date: addDays(TODAY, -Math.floor(i / 6)), time: `${int(8, 18)}:${String(int(0, 59)).padStart(2, "0")}`, kind: k, label: pick(labels[k]), ref: isClaim ? claims[i % 30]!.id : clients[i % 45]!.id, actor: k === "ai" ? (isClaim ? "Agent Sinistre" : "Agent Client") : pick(OPERATORS) };
+  return { id: `H-${i}`, date: addDays(TODAY, -Math.floor(i / 6)), time: `${int(8, 18)}:${String(int(0, 59)).padStart(2, "0")}`, kind: k, label: pick(labels[k]!), ref: isClaim ? claims[i % 30]!.id : clients[i % 45]!.id, actor: k === "ai" ? (isClaim ? "Agent Sinistre" : "Agent Client") : pick(OPERATORS) };
 });
 
 export interface Notif { id: string; text: string; ref: string; read: boolean; level: Priority; time: string }

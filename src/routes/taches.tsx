@@ -21,11 +21,11 @@ function Taches() {
   const [edit, setEdit] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
   const open = tasks.filter((t) => t.status !== "Terminée");
-  const groups: Record<string, typeof tasks> = {
+  const groups = {
     today: open.filter((t) => same(t.due, TODAY)), tomorrow: open.filter((t) => same(t.due, addDays(TODAY, 1))),
     week: open.filter((t) => t.due > TODAY && t.due <= addDays(TODAY, 7)), late: open.filter((t) => t.due < TODAY && !same(t.due, TODAY)), done: tasks.filter((t) => t.status === "Terminée"),
   };
-  const list = [...groups[tab]].sort(byPriority);
+  const list = [...groups[tab as keyof typeof groups]].sort(byPriority);
   return (
     <Shell>
       <PageHeader title="Tâches & Relances" subtitle={`${open.length} tâches ouvertes · ${groups.late.length} en retard`} />
