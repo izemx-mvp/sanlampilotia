@@ -114,7 +114,7 @@ export const claims: Claim[] = Array.from({ length: 30 }, (_, i) => {
   const declared = i === 3 ? new Date(2026, 9, 3) : addDays(TODAY, -int(3, 30));
   const lastUpdate = addDays(TODAY, -int(0, 6));
   return {
-    id, client, type: pick(["Accident automobile", "Bris de glace", "Vol partiel", "Collision", "Dégât des eaux"]),
+    id, client, type: i === 3 ? "Accident automobile" : pick(["Accident automobile", "Bris de glace", "Vol partiel", "Collision", "Dégât des eaux"]),
     vehicle: i === 3 ? "Dacia Duster" : pick(cars), plate: i === 3 ? "12345-A-6" : plate(), declared, expertId, garageId, stage,
     lastUpdate, nextFollow: addDays(TODAY, int(-2, 3)), operator: pick(OPERATORS), priority,
     status: stage === "Clôturé" ? "Clôturé" : pick(["En cours", "Bloqué", "En attente externe", "En cours"]),
