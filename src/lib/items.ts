@@ -12,7 +12,7 @@ export const byPriority = (a: { priority: Priority }, b: { priority: Priority })
 
 export function buildItems(clients: Client[], claims: Claim[]): Item[] {
   const a: Item[] = clients.map((c) => ({
-    id: c.id, kind: "Client", client: c.name, issue: c.reason, lastAction: c.timeline[c.timeline.length - 1]?.label ?? "", nextAction: c.recommendation.split(/[.,]/)[0],
+    id: c.id, kind: "Client", client: c.name, issue: c.reason, lastAction: c.timeline[c.timeline.length - 1]?.label ?? "", nextAction: c.recommendation.split(/[.,]/)[0] ?? "",
     due: c.nextFollow, agent: "Agent Client", operator: c.operator, priority: c.priority, status: c.status, type: c.category,
     age: Math.round((TODAY.getTime() - c.lastInteraction.getTime()) / 864e5), contact: { who: c.name, role: "client", phone: c.phone },
   }));

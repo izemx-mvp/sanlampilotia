@@ -11,7 +11,7 @@ const cars = ["Dacia Duster", "Dacia Logan", "Renault Clio", "Peugeot 208", "Hyu
 
 let seed = 7;
 const rnd = () => ((seed = (seed * 9301 + 49297) % 233280) / 233280);
-const pick = <T,>(a: T[]) => a[Math.floor(rnd() * a.length)];
+const pick = <T,>(a: T[]): T => a[Math.floor(rnd() * a.length)]!;
 const int = (a: number, b: number) => Math.floor(rnd() * (b - a + 1)) + a;
 const phone = () => `06 ${int(10, 99)} ${int(10, 99)} ${int(10, 99)} ${int(10, 99)}`;
 const plate = () => `${int(10000, 99999)}-${pick(["A", "B", "D", "H", "W"])}-${int(1, 80)}`;
@@ -49,7 +49,7 @@ const prios: Priority[] = ["critique", "haute", "haute", "moyenne", "moyenne", "
 
 export const clients: Client[] = Array.from({ length: 45 }, (_, i) => {
   const isProspect = i >= 30;
-  const c = i === 0 ? clientCases[4] : isProspect ? pick([clientCases[5], clientCases[6], clientCases[6]]) : pick(clientCases.filter((x) => x.category !== "Prospects à relancer"));
+  const c = i === 0 ? clientCases[4]! : isProspect ? pick([clientCases[5]!, clientCases[6]!]) : pick(clientCases.filter((x) => x.category !== "Prospects à relancer"));
   const name = i === 0 ? "Mohamed El Amrani" : `${first[i]} ${last[i]}`;
   const last_ = addDays(TODAY, -int(1, 9));
   const next = addDays(TODAY, int(-3, 4));
@@ -77,7 +77,7 @@ export interface Garage { id: string; name: string; contact: string; phone: stri
 export const experts: Expert[] = [
   ["Rachid Bennis", "Cabinet Expertise Atlas"], ["Nawal Kadiri", "Expertises Maghreb Conseil"], ["Hamid Oulad", "Cabinet Expert Auto Rabat"], ["Saïd Lazrak", "Bureau Technique Sud"],
   ["Fouad Tahri", "Expertise Plus Casablanca"], ["Amal Rhazi", "Cabinet Rhazi & Associés"], ["Jalil Marzouk", "Atlantique Expertises"], ["Laila Sabri", "Cabinet Expertise Nord"],
-].map(([n, c], i) => ({ id: `EXP-${i + 1}`, name: n, cabinet: c, phone: phone(), email: `${n.split(" ")[0].toLowerCase()}@expertise.ma`, active: int(4, 16), delay: +(1 + rnd() * 3.5).toFixed(1), late: int(0, 5), rate: int(70, 98), last: addDays(TODAY, -int(0, 5)) }));
+].map(([n, c], i) => ({ id: `EXP-${i + 1}`, name: n!, cabinet: c!, phone: phone(), email: `${n!.split(" ")[0]!.toLowerCase()}@expertise.ma`, active: int(4, 16), delay: +(1 + rnd() * 3.5).toFixed(1), late: int(0, 5), rate: int(70, 98), last: addDays(TODAY, -int(0, 5)) }));
 
 export const garages: Garage[] = ["Garage Atlas", "Auto Service Casablanca", "Garage Al Fath", "Carrosserie Moderne", "Garage Anfa Auto", "Méca Rabat Center", "Garage Ennour", "Auto Pro Marrakech", "Carrosserie du Détroit", "Garage Souss Auto"].map((n, i) => ({
   id: `GAR-${i + 1}`, name: n, contact: `${pick(first)} ${pick(last)}`, phone: phone(), city: pick(cities), active: i === 0 ? 14 : int(3, 12), delay: i === 0 ? 1.8 : +(1 + rnd() * 3).toFixed(1), late: int(0, 4), rate: i === 0 ? 92 : int(68, 97), last: addDays(TODAY, -int(0, 6)),
@@ -104,12 +104,12 @@ export const claims: Claim[] = Array.from({ length: 30 }, (_, i) => {
   let [issue, action] = pick(claimIssues);
   let client = `${pick(first)} ${pick(last)}`;
   let id = `SIN-2026-${int(1000, 9899)}`;
-  let garageId = pick(garages).id, expertId = pick(experts).id, stage = STAGES[i % 8];
+  let garageId = pick(garages).id, expertId = pick(experts).id, stage = STAGES[i % 8]!;
   let priority: Priority = pick(prios);
-  if (i === 0) { id = "SIN-2026-7841"; client = "Mohamed El Amrani"; issue = "Expert non relancé depuis 5 jours"; action = "Appeler l’expert"; priority = "critique"; stage = STAGES[2]; }
-  if (i === 1) { id = "SIN-2026-8421"; client = "Youssef Benali"; expertId = "EXP-1"; issue = "Rapport attendu depuis 3 jours"; action = "Relancer l’expert"; priority = "haute"; stage = STAGES[3]; }
-  if (i === 2) { id = "SIN-2026-7932"; client = "Sara Alaoui"; garageId = "GAR-2"; issue = "Devis réparation non reçu — retard 2 jours"; action = "Appeler le garage"; priority = "haute"; stage = STAGES[4]; }
-  if (i === 3) { id = "SIN-2026-00284"; client = "Youssef Benali"; issue = "Rapport toujours non reçu"; action = "Relancer l’expert"; priority = "haute"; stage = STAGES[2]; }
+  if (i === 0) { id = "SIN-2026-7841"; client = "Mohamed El Amrani"; issue = "Expert non relancé depuis 5 jours"; action = "Appeler l’expert"; priority = "critique"; stage = STAGES[2]!; }
+  if (i === 1) { id = "SIN-2026-8421"; client = "Youssef Benali"; expertId = "EXP-1"; issue = "Rapport attendu depuis 3 jours"; action = "Relancer l’expert"; priority = "haute"; stage = STAGES[3]!; }
+  if (i === 2) { id = "SIN-2026-7932"; client = "Sara Alaoui"; garageId = "GAR-2"; issue = "Devis réparation non reçu — retard 2 jours"; action = "Appeler le garage"; priority = "haute"; stage = STAGES[4]!; }
+  if (i === 3) { id = "SIN-2026-00284"; client = "Youssef Benali"; issue = "Rapport toujours non reçu"; action = "Relancer l’expert"; priority = "haute"; stage = STAGES[2]!; }
   if (stage === "Clôturé") priority = "basse";
   const declared = i === 3 ? new Date(2026, 9, 3) : addDays(TODAY, -int(3, 30));
   const lastUpdate = addDays(TODAY, -int(0, 6));
@@ -133,7 +133,7 @@ export const claims: Claim[] = Array.from({ length: 30 }, (_, i) => {
 export interface Task { id: string; ref: string; client: string; action: string; due: Date; priority: Priority; agent: Agent; operator: string; status: "À faire" | "En cours" | "Terminée" }
 export const tasks: Task[] = Array.from({ length: 50 }, (_, i) => {
   const isClaim = i % 2 === 0;
-  const src = isClaim ? claims[i % claims.length] : clients[i % clients.length];
+  const src = (isClaim ? claims[i % claims.length] : clients[i % clients.length])!;
   return {
     id: `T-${500 + i}`, ref: src.id, client: isClaim ? (src as Claim).client : (src as Client).name,
     action: isClaim ? (src as Claim).nextAction : (src as Client).recommendation.split(" ").slice(0, 5).join(" "),
@@ -152,7 +152,7 @@ export const history: HistoryItem[] = Array.from({ length: 40 }, (_, i) => {
     doc: ["Copie CIN reçue", "Rapport d’expertise ajouté"], ai: ["Agent IA : relance détectée", "Agent IA : priorité relevée à Haute", "Agent IA : tâche créée"], note: ["Note opérateur ajoutée"],
   };
   const isClaim = rnd() > 0.5;
-  return { id: `H-${i}`, date: addDays(TODAY, -Math.floor(i / 6)), time: `${int(8, 18)}:${String(int(0, 59)).padStart(2, "0")}`, kind: k, label: pick(labels[k]), ref: isClaim ? claims[i % 30].id : clients[i % 45].id, actor: k === "ai" ? (isClaim ? "Agent Sinistre" : "Agent Client") : pick(OPERATORS) };
+  return { id: `H-${i}`, date: addDays(TODAY, -Math.floor(i / 6)), time: `${int(8, 18)}:${String(int(0, 59)).padStart(2, "0")}`, kind: k, label: pick(labels[k]), ref: isClaim ? claims[i % 30]!.id : clients[i % 45]!.id, actor: k === "ai" ? (isClaim ? "Agent Sinistre" : "Agent Client") : pick(OPERATORS) };
 });
 
 export interface Notif { id: string; text: string; ref: string; read: boolean; level: Priority; time: string }

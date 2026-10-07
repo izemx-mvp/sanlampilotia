@@ -83,7 +83,7 @@ export function Tabs({ tabs, value, onChange }: { tabs: { id: string; label: str
     <div className="inline-flex flex-wrap gap-1 rounded-xl border border-border bg-surface-2 p-1">
       {tabs.map((t) => (
         <button key={t.id} onClick={() => onChange(t.id)} className={cn("relative rounded-lg px-3 py-1.5 text-sm font-medium transition-colors", value === t.id ? "text-foreground" : "text-muted-foreground hover:text-foreground")}>
-          {value === t.id && <motion.span layoutId={`tab-${tabs[0].id}`} className="absolute inset-0 rounded-lg bg-accent" transition={{ type: "spring", bounce: 0.2, duration: 0.4 }} />}
+          {value === t.id && <motion.span layoutId={`tab-${tabs[0]?.id}`} className="absolute inset-0 rounded-lg bg-accent" transition={{ type: "spring", bounce: 0.2, duration: 0.4 }} />}
           <span className="relative flex items-center gap-1.5">{t.label}{t.count !== undefined && <span className="rounded-md bg-background/50 px-1.5 text-[10px]">{t.count}</span>}</span>
         </button>
       ))}
