@@ -61,11 +61,11 @@ function Analytics() {
         </Card>
         <Card className="p-5"><h3 className="mb-4 font-semibold">Délais moyens</h3>
           <div className="grid gap-3 sm:grid-cols-3">
-            {[["Expertise", avg(s.experts.map((e) => e.avgDelay))], ["Réparation", avg(s.garages.map((g) => g.avgDelay))], ["Clôture sinistre", "18,5"]].map(([l, v]) => <div key={l} className="rounded-xl bg-surface-2 p-4"><p className="text-xs text-muted-foreground">Délai moyen {l.toLowerCase()}</p><p className="mt-1 font-display text-2xl font-semibold">{v} j</p></div>)}
+            {([["Expertise", avg(s.experts.map((e) => e.avgDelay))], ["Réparation", avg(s.garages.map((g) => g.avgDelay))], ["Clôture sinistre", "18,5"]] as [string, string][]).map(([l, v]) => <div key={l} className="rounded-xl bg-surface-2 p-4"><p className="text-xs text-muted-foreground">Délai moyen {l.toLowerCase()}</p><p className="mt-1 font-display text-2xl font-semibold">{v} j</p></div>)}
           </div>
           <div className="mt-5 grid gap-5 sm:grid-cols-2">
             {([["Experts les plus sollicités", top("e")], ["Garages les plus sollicités", top("g")]] as const).map(([t, list]) => (
-              <div key={t}><p className="mb-2 text-sm font-semibold">{t}</p>{list.map((x, i) => <div key={x.name} className="mb-2"><div className="flex justify-between text-xs"><span>{i + 1}. {x.name}</span><b>{x.v}</b></div><div className="mt-1 h-1.5 rounded-full bg-muted"><div className="h-full rounded-full bg-gradient-primary" style={{ width: `${(x.v / list[0].v) * 100}%` }} /></div></div>)}</div>
+              <div key={t}><p className="mb-2 text-sm font-semibold">{t}</p>{list.map((x, i) => <div key={x.name} className="mb-2"><div className="flex justify-between text-xs"><span>{i + 1}. {x.name}</span><b>{x.v}</b></div><div className="mt-1 h-1.5 rounded-full bg-muted"><div className="h-full rounded-full bg-gradient-primary" style={{ width: `${(x.v / (list[0]?.v || 1)) * 100}%` }} /></div></div>)}</div>
             ))}
           </div>
         </Card>
