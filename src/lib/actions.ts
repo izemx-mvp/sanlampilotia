@@ -93,3 +93,4 @@ export const partnerLoad = (claims: Claim[], kind: PartnerKind, id: string) => {
   const mine = claims.filter((c) => (kind === "expert" ? c.expertId : c.garageId) === id);
   const done = mine.filter((c) => (kind === "expert" ? c.expertStatus === "Rapport reçu" : c.garageStatus === "Véhicule prêt") || c.status === "Clôturé");
   return { mine, current: mine.length - done.length, done: done.length };
+};

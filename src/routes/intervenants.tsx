@@ -13,8 +13,6 @@ import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/intervenants")({ head: pageHead("Experts & Garagistes", "Gérez vos experts et garages partenaires : ajout, modification, import Excel / CSV."), component: Partners });
 
-};
-
 function Partners() {
   const s = useStore();
   const nav = useNavigate();
