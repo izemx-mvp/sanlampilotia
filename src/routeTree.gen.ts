@@ -13,15 +13,9 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AgentClientRouteImport } from './routes/agent-client'
 import { Route as AgentSinistreRouteImport } from './routes/agent-sinistre'
 import { Route as AnalyticsRouteImport } from './routes/analytics'
-import { Route as ClientsRouteImport } from './routes/clients'
-import { Route as HistoriqueRouteImport } from './routes/historique'
 import { Route as IntervenantsRouteImport } from './routes/intervenants'
-import { Route as LoginRouteImport } from './routes/login'
-import { Route as NotificationsRouteImport } from './routes/notifications'
 import { Route as ParametresRouteImport } from './routes/parametres'
-import { Route as SuiviRouteImport } from './routes/suivi'
-import { Route as TachesRouteImport } from './routes/taches'
-import { Route as SinistresIndexRouteImport } from './routes/sinistres.index'
+import { Route as ClientsIdRouteImport } from './routes/clients.$id'
 import { Route as SinistresIdRouteImport } from './routes/sinistres.$id'
 
 const IndexRoute = IndexRouteImport.update({
@@ -44,29 +38,9 @@ const AnalyticsRoute = AnalyticsRouteImport.update({
   path: '/analytics',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ClientsRoute = ClientsRouteImport.update({
-  id: '/clients',
-  path: '/clients',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const HistoriqueRoute = HistoriqueRouteImport.update({
-  id: '/historique',
-  path: '/historique',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const IntervenantsRoute = IntervenantsRouteImport.update({
   id: '/intervenants',
   path: '/intervenants',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const LoginRoute = LoginRouteImport.update({
-  id: '/login',
-  path: '/login',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const NotificationsRoute = NotificationsRouteImport.update({
-  id: '/notifications',
-  path: '/notifications',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ParametresRoute = ParametresRouteImport.update({
@@ -74,19 +48,9 @@ const ParametresRoute = ParametresRouteImport.update({
   path: '/parametres',
   getParentRoute: () => rootRouteImport,
 } as any)
-const SuiviRoute = SuiviRouteImport.update({
-  id: '/suivi',
-  path: '/suivi',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const TachesRoute = TachesRouteImport.update({
-  id: '/taches',
-  path: '/taches',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SinistresIndexRoute = SinistresIndexRouteImport.update({
-  id: '/sinistres/',
-  path: '/sinistres/',
+const ClientsIdRoute = ClientsIdRouteImport.update({
+  id: '/clients/$id',
+  path: '/clients/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SinistresIdRoute = SinistresIdRouteImport.update({
@@ -100,32 +64,20 @@ export interface FileRoutesByFullPath {
   '/agent-client': typeof AgentClientRoute
   '/agent-sinistre': typeof AgentSinistreRoute
   '/analytics': typeof AnalyticsRoute
-  '/clients': typeof ClientsRoute
-  '/historique': typeof HistoriqueRoute
   '/intervenants': typeof IntervenantsRoute
-  '/login': typeof LoginRoute
-  '/notifications': typeof NotificationsRoute
   '/parametres': typeof ParametresRoute
-  '/suivi': typeof SuiviRoute
-  '/taches': typeof TachesRoute
+  '/clients/$id': typeof ClientsIdRoute
   '/sinistres/$id': typeof SinistresIdRoute
-  '/sinistres/': typeof SinistresIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/agent-client': typeof AgentClientRoute
   '/agent-sinistre': typeof AgentSinistreRoute
   '/analytics': typeof AnalyticsRoute
-  '/clients': typeof ClientsRoute
-  '/historique': typeof HistoriqueRoute
   '/intervenants': typeof IntervenantsRoute
-  '/login': typeof LoginRoute
-  '/notifications': typeof NotificationsRoute
   '/parametres': typeof ParametresRoute
-  '/suivi': typeof SuiviRoute
-  '/taches': typeof TachesRoute
+  '/clients/$id': typeof ClientsIdRoute
   '/sinistres/$id': typeof SinistresIdRoute
-  '/sinistres': typeof SinistresIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -133,16 +85,10 @@ export interface FileRoutesById {
   '/agent-client': typeof AgentClientRoute
   '/agent-sinistre': typeof AgentSinistreRoute
   '/analytics': typeof AnalyticsRoute
-  '/clients': typeof ClientsRoute
-  '/historique': typeof HistoriqueRoute
   '/intervenants': typeof IntervenantsRoute
-  '/login': typeof LoginRoute
-  '/notifications': typeof NotificationsRoute
   '/parametres': typeof ParametresRoute
-  '/suivi': typeof SuiviRoute
-  '/taches': typeof TachesRoute
+  '/clients/$id': typeof ClientsIdRoute
   '/sinistres/$id': typeof SinistresIdRoute
-  '/sinistres/': typeof SinistresIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -151,48 +97,30 @@ export interface FileRouteTypes {
     | '/agent-client'
     | '/agent-sinistre'
     | '/analytics'
-    | '/clients'
-    | '/historique'
     | '/intervenants'
-    | '/login'
-    | '/notifications'
     | '/parametres'
-    | '/suivi'
-    | '/taches'
+    | '/clients/$id'
     | '/sinistres/$id'
-    | '/sinistres/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/agent-client'
     | '/agent-sinistre'
     | '/analytics'
-    | '/clients'
-    | '/historique'
     | '/intervenants'
-    | '/login'
-    | '/notifications'
     | '/parametres'
-    | '/suivi'
-    | '/taches'
+    | '/clients/$id'
     | '/sinistres/$id'
-    | '/sinistres'
   id:
     | '__root__'
     | '/'
     | '/agent-client'
     | '/agent-sinistre'
     | '/analytics'
-    | '/clients'
-    | '/historique'
     | '/intervenants'
-    | '/login'
-    | '/notifications'
     | '/parametres'
-    | '/suivi'
-    | '/taches'
+    | '/clients/$id'
     | '/sinistres/$id'
-    | '/sinistres/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -200,16 +128,10 @@ export interface RootRouteChildren {
   AgentClientRoute: typeof AgentClientRoute
   AgentSinistreRoute: typeof AgentSinistreRoute
   AnalyticsRoute: typeof AnalyticsRoute
-  ClientsRoute: typeof ClientsRoute
-  HistoriqueRoute: typeof HistoriqueRoute
   IntervenantsRoute: typeof IntervenantsRoute
-  LoginRoute: typeof LoginRoute
-  NotificationsRoute: typeof NotificationsRoute
   ParametresRoute: typeof ParametresRoute
-  SuiviRoute: typeof SuiviRoute
-  TachesRoute: typeof TachesRoute
+  ClientsIdRoute: typeof ClientsIdRoute
   SinistresIdRoute: typeof SinistresIdRoute
-  SinistresIndexRoute: typeof SinistresIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -242,39 +164,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AnalyticsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/clients': {
-      id: '/clients'
-      path: '/clients'
-      fullPath: '/clients'
-      preLoaderRoute: typeof ClientsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/historique': {
-      id: '/historique'
-      path: '/historique'
-      fullPath: '/historique'
-      preLoaderRoute: typeof HistoriqueRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/intervenants': {
       id: '/intervenants'
       path: '/intervenants'
       fullPath: '/intervenants'
       preLoaderRoute: typeof IntervenantsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/login': {
-      id: '/login'
-      path: '/login'
-      fullPath: '/login'
-      preLoaderRoute: typeof LoginRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/notifications': {
-      id: '/notifications'
-      path: '/notifications'
-      fullPath: '/notifications'
-      preLoaderRoute: typeof NotificationsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/parametres': {
@@ -284,25 +178,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ParametresRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/suivi': {
-      id: '/suivi'
-      path: '/suivi'
-      fullPath: '/suivi'
-      preLoaderRoute: typeof SuiviRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/taches': {
-      id: '/taches'
-      path: '/taches'
-      fullPath: '/taches'
-      preLoaderRoute: typeof TachesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/sinistres/': {
-      id: '/sinistres/'
-      path: '/sinistres'
-      fullPath: '/sinistres/'
-      preLoaderRoute: typeof SinistresIndexRouteImport
+    '/clients/$id': {
+      id: '/clients/$id'
+      path: '/clients/$id'
+      fullPath: '/clients/$id'
+      preLoaderRoute: typeof ClientsIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/sinistres/$id': {
@@ -320,16 +200,10 @@ const rootRouteChildren: RootRouteChildren = {
   AgentClientRoute: AgentClientRoute,
   AgentSinistreRoute: AgentSinistreRoute,
   AnalyticsRoute: AnalyticsRoute,
-  ClientsRoute: ClientsRoute,
-  HistoriqueRoute: HistoriqueRoute,
   IntervenantsRoute: IntervenantsRoute,
-  LoginRoute: LoginRoute,
-  NotificationsRoute: NotificationsRoute,
   ParametresRoute: ParametresRoute,
-  SuiviRoute: SuiviRoute,
-  TachesRoute: TachesRoute,
+  ClientsIdRoute: ClientsIdRoute,
   SinistresIdRoute: SinistresIdRoute,
-  SinistresIndexRoute: SinistresIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

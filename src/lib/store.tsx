@@ -1,105 +1,121 @@
 import { createContext, useContext, useState, type ReactNode } from "react";
-import { toast } from "sonner";
-import * as M from "./mock";
+import * as D from "./data";
+import type { Cabinet, Claim, Client, Expert, Follow, Garage, Missing, Payment, Quote, QuoteStatus, Rule } from "./data";
+import { GARAGE_STATUSES, TODAY, addDays, nextClaimId, uid } from "./data";
 
-export interface CallTarget { ref: string; who: string; role: "client" | "expert" | "garage"; phone: string }
+export interface State { clients: Client[]; quotes: Quote[]; payments: Payment[]; missing: Missing[]; claims: Claim[]; experts: Expert[]; garages: Garage[]; cabinet: Cabinet; rules: Rule[] }
+export type PartnerKind = "expert" | "garage";
+export interface NewClaim { clientId: string; contract: string; type: string; date: Date; city: string; vehicle: string; plate: string; description: string; docs: string[]; photos: string[]; expertId?: string; garageId?: string }
 
-interface Store {
-  clients: M.Client[]; claims: M.Claim[]; tasks: M.Task[]; history: M.HistoryItem[]; notifs: M.Notif[];
-  collapsed: boolean; setCollapsed: (b: boolean) => void;
-  notifOpen: boolean; setNotifOpen: (b: boolean) => void;
-  assistantOpen: boolean; setAssistantOpen: (b: boolean) => void;
-  call: CallTarget | null; startCall: (t: CallTarget) => void; endCall: () => void;
-  drawerClient: string | null; openClient: (id: string | null) => void;
-  logCall: (t: CallTarget, result: string, duration: string) => void;
-  message: (ref: string, channel: "whatsapp" | "email", who: string) => void;
-  addNote: (ref: string, note: string) => void;
-  postpone: (ref: string, days: number) => void;
-  resolve: (ref: string) => void;
-  moveClaim: (id: string, stage: string) => void;
-  updateTask: (id: string, patch: Partial<M.Task>) => void;
-  deleteTask: (id: string) => void;
-  setNotifs: (fn: (n: M.Notif[]) => M.Notif[]) => void;
-  setGarageStatus: (id: string, s: string) => void;
+function useStoreValue() {
+  const [s, setS] = useState<State>(() => ({ clients: D.CLIENTS, quotes: D.QUOTES, payments: D.PAYMENTS, missing: D.MISSING, claims: D.CLAIMS, experts: D.EXPERTS, garages: D.GARAGES, cabinet: D.CABINET, rules: D.RULES }));
+  const mapClaim = (id: string, fn: (c: Claim, st: State) => Claim) => setS((st) => ({ ...st, claims: st.claims.map((c) => (c.id === id ? fn(c, st) : c)) }));
+  const rule = (k: string, i = 0) => s.rules.find((r) => r.key === k)?.steps[i]?.value ?? 2;
+  const fl = (f: Follow) => `Relance : ${f.result}${f.comment ? ` — ${f.comment}` : ""}`;
+
+  return {
+    ...s,
+    addQuote: (q: { clientId: string; product: string; amount: number; date: Date; status: QuoteStatus; doc?: string }) => {
+      const id = `DEV-2026-${String(41 + s.quotes.length).padStart(3, "0")}`;
+      const open = q.status === "Envoyé" || q.status === "En attente";
+      setS((st) => ({ ...st, quotes: [{ ...q, id, doc: q.doc || `devis-${id}.pdf`, nextFollow: open ? addDays(q.date, rule("devis")) : q.status === "À préparer" ? addDays(TODAY, 1) : undefined, history: [{ date: q.date, label: `Devis ${id} ajouté` }] }, ...st.quotes] }));
+      return id;
+    },
+    setQuoteStatus: (id: string, status: QuoteStatus) => setS((st) => ({ ...st, quotes: st.quotes.map((q) => q.id !== id ? q : { ...q, status, nextFollow: status === "Accepté" || status === "Refusé" ? undefined : status === "Envoyé" ? addDays(TODAY, rule("devis")) : q.nextFollow, history: [...q.history, { date: TODAY, label: `Statut : ${status}` }] }) })),
+    followQuote: (id: string, f: Follow) => setS((st) => ({ ...st, quotes: st.quotes.map((q) => {
+      if (q.id !== id) return q;
+      const status: QuoteStatus = f.result === "Devis accepté" ? "Accepté" : f.result === "Devis refusé" ? "Refusé" : q.status === "Envoyé" ? "En attente" : q.status;
+      const closed = status === "Accepté" || status === "Refusé";
+      return { ...q, status, lastFollow: f.date, nextFollow: closed ? undefined : f.next, history: [...q.history, { date: f.date, label: fl(f) }] };
+    }) })),
+    followPayment: (id: string, f: Follow) => setS((st) => ({ ...st, payments: st.payments.map((p) => p.id !== id ? p : f.result === "Paiement reçu"
+      ? { ...p, paid: p.amount, lastFollow: f.date, nextFollow: undefined, timeline: [...p.timeline, { date: f.date, label: "Paiement reçu — soldé" }] }
+      : { ...p, lastFollow: f.date, nextFollow: f.next, timeline: [...p.timeline, { date: f.date, label: fl(f) }] }) })),
+    addPayment: (id: string, amount: number) => setS((st) => ({ ...st, payments: st.payments.map((p) => {
+      if (p.id !== id) return p;
+      const paid = Math.min(p.amount, p.paid + amount);
+      return { ...p, paid, nextFollow: paid >= p.amount ? undefined : p.nextFollow, timeline: [...p.timeline, { date: TODAY, label: `Paiement enregistré : ${D.dh(amount)}` }] };
+    }) })),
+    followMissing: (id: string, f: Follow) => setS((st) => ({ ...st, missing: st.missing.map((m) => (m.id !== id ? m : { ...m, status: "Relancé", lastFollow: f.date, nextFollow: f.next })) })),
+    markReceived: (id: string) => setS((st) => ({ ...st, missing: st.missing.map((m) => (m.id !== id ? m : { ...m, status: "Complété", nextFollow: undefined })) })),
+    addClaim: (n: NewClaim) => {
+      const id = nextClaimId(s.claims);
+      const ex = s.experts.find((e) => e.id === n.expertId), ga = s.garages.find((g) => g.id === n.garageId);
+      const docs = [...n.docs.map((name) => ({ id: uid(), name, category: /constat/i.test(name) ? "Constat" : /cin/i.test(name) ? "CIN" : /grise/i.test(name) ? "Carte grise" : "Autres documents", date: TODAY })), ...n.photos.map((name) => ({ id: uid(), name, category: "Photos", date: TODAY }))];
+      const claim: Claim = {
+        id, clientId: n.clientId, contract: n.contract, type: n.type, date: n.date, city: n.city, vehicle: n.vehicle, plate: n.plate, description: n.description,
+        status: ex ? "Expertise en cours" : "Déclaré", nextAction: ex ? undefined : addDays(TODAY, 1),
+        expertId: ex?.id, expertStatus: ex ? "Rapport attendu" : "Expert à affecter", expertAssigned: ex ? TODAY : undefined, expertNext: ex ? addDays(TODAY, rule("experts")) : undefined, expertFollows: [],
+        garageId: ga?.id, garageStatus: ga ? "Véhicule reçu" : "Garage à affecter", garageAssigned: ga ? TODAY : undefined, garageNext: ga ? addDays(TODAY, rule("garages")) : undefined, garageFollows: [],
+        garageQuotes: [], docs,
+        history: [{ date: TODAY, label: "Sinistre déclaré" }, ...(ex ? [{ date: TODAY, label: `Expert affecté : ${ex.cabinet}` }] : []), ...(ga ? [{ date: TODAY, label: `Garage affecté : ${ga.name}` }] : [])],
+      };
+      setS((st) => ({ ...st, claims: [claim, ...st.claims] }));
+      return id;
+    },
+    updateClaim: (id: string, patch: Partial<Claim>, label?: string) => mapClaim(id, (c) => ({ ...c, ...patch, history: label ? [...c.history, { date: TODAY, label }] : c.history })),
+    assign: (claimId: string, kind: PartnerKind, pid: string) => mapClaim(claimId, (c, st) => {
+      if (kind === "expert") {
+        const e = st.experts.find((x) => x.id === pid)!;
+        return { ...c, expertId: pid, expertAssigned: TODAY, expertStatus: "Rapport attendu", expertNext: addDays(TODAY, rule("experts")), nextAction: undefined,
+          status: c.status === "Déclaré" || c.status === "Expert à affecter" ? "Expertise en cours" : c.status, history: [...c.history, { date: TODAY, label: `Expert affecté : ${e.cabinet}` }] };
+      }
+      const g = st.garages.find((x) => x.id === pid)!;
+      return { ...c, garageId: pid, garageAssigned: TODAY, garageStatus: "Devis garage attendu", garageNext: addDays(TODAY, rule("garages")), nextAction: undefined,
+        status: c.status === "Garage à affecter" ? "Réparation" : c.status, history: [...c.history, { date: TODAY, label: `Garage affecté : ${g.name}` }] };
+    }),
+    followPartner: (claimId: string, kind: PartnerKind, f: Follow) => mapClaim(claimId, (c, st) => {
+      if (kind === "expert") {
+        const name = st.experts.find((e) => e.id === c.expertId)?.cabinet ?? "expert";
+        const got = f.result === "Rapport reçu";
+        const es = ["Expertise programmée", "Rapport en préparation", "Rapport reçu"].includes(f.result) ? f.result : c.expertStatus;
+        return { ...c, expertStatus: es, expertLast: f.date, expertNext: got ? undefined : f.next, expertFollows: [...c.expertFollows, f],
+          status: got && c.status === "Expertise en cours" ? (c.garageId ? "Réparation" : "Garage à affecter") : c.status,
+          nextAction: got && !c.garageId ? addDays(TODAY, 1) : c.nextAction,
+          docs: got ? [...c.docs, { id: uid(), name: `rapport-expertise-${c.id}.pdf`, category: "Rapport expert", date: f.date }] : c.docs,
+          history: [...c.history, { date: f.date, label: `Relance expert (${name}) : ${f.result}${f.comment ? ` — ${f.comment}` : ""}` }] };
+      }
+      const name = st.garages.find((g) => g.id === c.garageId)?.name ?? "garage";
+      const gs = GARAGE_STATUSES.includes(f.result) ? f.result : c.garageStatus;
+      const ready = gs === "Véhicule prêt";
+      return { ...c, garageStatus: gs, garageLast: f.date, garageNext: ready ? undefined : f.next, garageFollows: [...c.garageFollows, f],
+        status: ready ? "Règlement" : gs === "Réparation en cours" ? "Réparation" : c.status,
+        history: [...c.history, { date: f.date, label: `Relance garage (${name}) : ${f.result}${f.comment ? ` — ${f.comment}` : ""}` }] };
+    }),
+    addGarageQuote: (claimId: string, q: { amount: number; date: Date; doc: string }) => mapClaim(claimId, (c) => c.garageId ? {
+      ...c, garageStatus: "Devis reçu", garageQuotes: [...c.garageQuotes, { id: uid(), garageId: c.garageId, status: "Reçu", ...q }],
+      docs: [...c.docs, { id: uid(), name: q.doc, category: "Devis garage", date: q.date }], history: [...c.history, { date: q.date, label: `Devis garage ajouté : ${D.dh(q.amount)}` }],
+    } : c),
+    setGarageQuoteStatus: (claimId: string, qid: string, status: "Validé" | "Refusé") => mapClaim(claimId, (c) => ({
+      ...c, garageQuotes: c.garageQuotes.map((q) => (q.id === qid ? { ...q, status } : q)),
+      garageStatus: status === "Validé" ? "Réparation en cours" : "Devis garage attendu", status: status === "Validé" ? "Réparation" : c.status,
+      history: [...c.history, { date: TODAY, label: `Devis garage ${status.toLowerCase()}` }],
+    })),
+    addDoc: (claimId: string, doc: { name: string; category: string }) => mapClaim(claimId, (c) => ({ ...c, docs: [...c.docs, { id: uid(), date: TODAY, ...doc }], history: [...c.history, { date: TODAY, label: `Document ajouté : ${doc.name}` }] })),
+    savePartner: (kind: PartnerKind, item: Expert | Garage) => setS((st) => {
+      const key = kind === "expert" ? "experts" : "garages";
+      const list = st[key] as (Expert | Garage)[];
+      const exists = list.some((x) => x.id === item.id);
+      const next = exists ? list.map((x) => (x.id === item.id ? item : x)) : [{ ...item, id: `${kind === "expert" ? "EXP" : "GAR"}-${uid()}` }, ...list];
+      return { ...st, [key]: next };
+    }),
+    deletePartner: (kind: PartnerKind, id: string) => setS((st) => kind === "expert" ? { ...st, experts: st.experts.filter((x) => x.id !== id) } : { ...st, garages: st.garages.filter((x) => x.id !== id) }),
+    importPartners: (kind: PartnerKind, items: (Expert | Garage)[]) => setS((st) => kind === "expert"
+      ? { ...st, experts: [...(items as Expert[]).map((x) => ({ ...x, id: `EXP-${uid()}` })), ...st.experts] }
+      : { ...st, garages: [...(items as Garage[]).map((x) => ({ ...x, id: `GAR-${uid()}` })), ...st.garages] }),
+    setCabinet: (cabinet: Cabinet) => setS((st) => ({ ...st, cabinet })),
+    setRule: (rule: Rule) => setS((st) => ({ ...st, rules: st.rules.map((r) => (r.key === rule.key ? rule : r)) })),
+  };
 }
 
+type Store = ReturnType<typeof useStoreValue>;
 const Ctx = createContext<Store | null>(null);
-const now = () => new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
-
 export function StoreProvider({ children }: { children: ReactNode }) {
-  const [clients, setClients] = useState(M.clients);
-  const [claims, setClaims] = useState(M.claims);
-  const [tasks, setTasks] = useState(M.tasks);
-  const [history, setHistory] = useState(M.history);
-  const [notifs, setNotifs] = useState(M.notifications);
-  const [collapsed, setCollapsed] = useState(false);
-  const [notifOpen, setNotifOpen] = useState(false);
-  const [assistantOpen, setAssistantOpen] = useState(false);
-  const [call, setCall] = useState<CallTarget | null>(null);
-  const [drawerClient, openClient] = useState<string | null>(null);
-
-  const pushEvent = (ref: string, ev: M.TimelineEvent, patchClient: Partial<M.Client> = {}, patchClaim: Partial<M.Claim> = {}) => {
-    setHistory((h) => [{ id: `H-${Date.now()}`, date: M.TODAY, time: now(), kind: ev.kind, label: ev.label, ref, actor: "Salma Idrissi" }, ...h]);
-    setClients((cs) => cs.map((c) => (c.id === ref ? { ...c, ...patchClient, timeline: [...c.timeline, ev] } : c)));
-    setClaims((cs) => cs.map((c) => (c.id === ref ? { ...c, ...patchClaim, timeline: [...c.timeline, ev] } : c)));
-  };
-
-  const logCall: Store["logCall"] = (t, result, duration) => {
-    const label = `Appel ${t.role === "client" ? "client" : t.role} (${t.who}) — ${result} · ${duration}`;
-    const ev: M.TimelineEvent = { date: M.TODAY, label, kind: "call" };
-    const next = M.addDays(M.TODAY, result === "Répondu" || result === "Rapport envoyé" ? 3 : 1);
-    pushEvent(t.ref, ev,
-      { lastInteraction: M.TODAY, nextFollow: next, status: result === "Répondu" ? "Contacté" : result === "Pas de réponse" ? "À relancer" : "En attente client" },
-      {
-        lastUpdate: M.TODAY, nextFollow: next, lastAction: `Appel ${t.role} — ${result}`,
-        status: result === "Rapport envoyé" || result === "Véhicule prêt" ? "En cours" : "En attente externe",
-        ...(t.role === "expert" ? {} : {}),
-      });
-    setClaims((cs) => cs.map((c) => {
-      if (c.id !== t.ref) return c;
-      const entry = { date: M.TODAY, label: result };
-      return t.role === "expert" ? { ...c, expertCalls: [entry, ...c.expertCalls] } : t.role === "garage" ? { ...c, garageCalls: [entry, ...c.garageCalls] } : c;
-    }));
-    toast.success("Appel enregistré", { description: `${result} — prochaine relance le ${M.fmt(next)}` });
-  };
-
-  const value: Store = {
-    clients, claims, tasks, history, notifs, collapsed, setCollapsed, notifOpen, setNotifOpen, assistantOpen, setAssistantOpen,
-    call, startCall: setCall, endCall: () => setCall(null), drawerClient, openClient, logCall,
-    message: (ref, channel, who) => {
-      pushEvent(ref, { date: M.TODAY, label: `${channel === "whatsapp" ? "WhatsApp" : "Email"} envoyé à ${who}`, kind: channel }, { lastInteraction: M.TODAY, status: "En attente client" }, { lastUpdate: M.TODAY });
-      toast.success(`${channel === "whatsapp" ? "WhatsApp" : "Email"} envoyé`, { description: who });
-    },
-    addNote: (ref, note) => { pushEvent(ref, { date: M.TODAY, label: `Note : ${note}`, kind: "note" }); toast("Note ajoutée"); },
-    postpone: (ref, days) => {
-      const d = M.addDays(M.TODAY, days);
-      setClients((cs) => cs.map((c) => (c.id === ref ? { ...c, nextFollow: d } : c)));
-      setClaims((cs) => cs.map((c) => (c.id === ref ? { ...c, nextFollow: d } : c)));
-      setTasks((ts) => ts.map((t) => (t.id === ref || t.ref === ref ? { ...t, due: d } : t)));
-      toast("Relance reportée", { description: `Nouvelle échéance : ${M.fmt(d)}` });
-    },
-    resolve: (ref) => {
-      pushEvent(ref, { date: M.TODAY, label: "Dossier marqué comme résolu", kind: "status" }, { status: "Régularisé", priority: "basse" }, { status: "Résolu", priority: "basse" });
-      setTasks((ts) => ts.map((t) => (t.id === ref || t.ref === ref ? { ...t, status: "Terminée" } : t)));
-      toast.success("Dossier résolu", { description: ref });
-    },
-    moveClaim: (id, stage) => {
-      const c = claims.find((x) => x.id === id);
-      if (!c || c.stage === stage) return;
-      setClaims((cs) => cs.map((x) => (x.id === id ? { ...x, stage, lastUpdate: M.TODAY, status: stage === "Clôturé" ? "Clôturé" : x.status } : x)));
-      pushEvent(id, { date: M.TODAY, label: `Étape → ${stage}`, kind: "status" });
-      toast.success(`${id} déplacé`, { description: stage });
-    },
-    updateTask: (id, patch) => setTasks((ts) => ts.map((t) => (t.id === id ? { ...t, ...patch } : t))),
-    deleteTask: (id) => { setTasks((ts) => ts.filter((t) => t.id !== id)); toast("Tâche supprimée"); },
-    setNotifs,
-    setGarageStatus: (id, s) => { setClaims((cs) => cs.map((c) => (c.id === id ? { ...c, garageStatus: s } : c))); pushEvent(id, { date: M.TODAY, label: `Garage : ${s}`, kind: "status" }); },
-  };
-  return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
+  const v = useStoreValue();
+  return <Ctx.Provider value={v}>{children}</Ctx.Provider>;
 }
-
-export const useStore = () => {
-  const s = useContext(Ctx);
-  if (!s) throw new Error("StoreProvider missing");
-  return s;
-};
+export function useStore() {
+  const v = useContext(Ctx);
+  if (!v) throw new Error("useStore outside provider");
+  return v;
+}

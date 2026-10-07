@@ -1,96 +1,157 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowLeft, Bot, Car, Mail, MessageCircle, Phone, Wrench, UserCheck, Check, AlertTriangle } from "lucide-react";
-import { useState } from "react";
-import { Shell, Timeline } from "@/components/app/Shell";
-import { Button, Card, PriorityBadge, StatusBadge } from "@/components/app/ui";
-import { PostponeButton } from "@/components/app/actions";
+import { ArrowLeft, Car, Download, Eye, FileText, FolderOpen, History, Plus, Repeat, UserRound, UserRoundCheck, Wrench } from "lucide-react";
+import { useState, type ReactNode } from "react";
+import { toast } from "sonner";
+import { Shell } from "@/components/app/Shell";
+import { Badge, Btn, Card, Field, Modal, NextDate, Phone, Prio, Table, Timeline, downloadMock, inputCls, td } from "@/components/app/ui";
+import { FilePick, PartnerRecos, useDocViewer, useFollowDialog } from "@/components/app/dialogs";
 import { useStore } from "@/lib/store";
-import { GARAGE_STATUSES, daysSince, expertById, fmt, fmtLong, garageById } from "@/lib/mock";
+import { claimPriority } from "@/lib/actions";
+import { CLAIM_STATUSES, DOC_CATEGORIES, EXPERT_RESULTS, GARAGE_RESULTS, TODAY, dh, fmt, fmtFull, fromInput, toInput, type ClaimStatus } from "@/lib/data";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/sinistres/$id")({
-  head: ({ params }) => ({ meta: [{ title: `${params.id} — Fiche sinistre — PilotIA` }, { name: "description", content: `Suivi détaillé du sinistre ${params.id}.` }, { property: "og:title", content: `Sinistre ${params.id}` }, { property: "og:description", content: "Timeline, expert, garage et recommandations IA." }] }),
+  head: ({ params }) => ({ meta: [{ title: `Sinistre ${params.id} — PilotIA` }, { name: "description", content: "Fiche sinistre : client, véhicule, expert, garage, documents et historique." }, { property: "og:title", content: `Sinistre ${params.id} — PilotIA` }, { property: "og:description", content: "Fiche sinistre détaillée." }] }),
   component: ClaimPage,
 });
 
-function Info({ l, v }: { l: string; v: string }) { return <div><p className="text-[11px] text-muted-foreground">{l}</p><p className="text-sm font-medium">{v}</p></div>; }
+function Block({ title, icon: Icon, action, children, className }: { title: string; icon: typeof Car; action?: ReactNode; children: ReactNode; className?: string }) {
+  return (
+    <Card className={cn("p-5", className)}>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-2"><h2 className="flex items-center gap-2 text-lg font-semibold"><span className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent text-primary"><Icon className="h-4 w-4" /></span>{title}</h2>{action}</div>
+      {children}
+    </Card>
+  );
+}
+const Row = ({ k, children }: { k: string; children: ReactNode }) => <div className="flex items-start justify-between gap-3 py-1.5 text-sm"><dt className="text-muted-foreground">{k}</dt><dd className="text-right font-medium">{children}</dd></div>;
 
 function ClaimPage() {
   const { id } = Route.useParams();
-  const { claims, startCall, message, addNote, resolve, setGarageStatus } = useStore();
-  const c = claims.find((x) => x.id === id);
-  const [note, setNote] = useState("");
-  if (!c) return <Shell><p className="text-muted-foreground">Sinistre introuvable. <Link to="/sinistres" className="text-primary">Retour</Link></p></Shell>;
-  const ex = expertById(c.expertId), ga = garageById(c.garageId);
-  const stale = daysSince(c.lastUpdate);
+  const s = useStore();
+  const [follow, followEl] = useFollowDialog();
+  const [showDoc, docEl] = useDocViewer();
+  const [change, setChange] = useState<"" | "expert" | "garage">("");
+  const [gq, setGq] = useState<{ amount: string; date: string; doc: string } | null>(null);
+  const [doc, setDoc] = useState<{ category: string; name: string } | null>(null);
+  const c = s.claims.find((x) => x.id === id);
+  if (!c) return <Shell><p className="text-muted-foreground">Sinistre introuvable. <Link to="/agent-sinistre" className="text-primary">Retour</Link></p></Shell>;
+  const client = s.clients.find((x) => x.id === c.clientId)!;
+  const ex = s.experts.find((x) => x.id === c.expertId);
+  const ga = s.garages.find((x) => x.id === c.garageId);
+  const docLines = (name: string, cat: string) => [name, `Sinistre : ${c.id}`, `Client : ${client.name}`, `Vehicule : ${c.vehicle} ${c.plate}`, `Categorie : ${cat}`, s.cabinet.name];
+
   return (
     <Shell>
-      <Link to="/sinistres" className="mb-4 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="h-4 w-4" />Sinistres</Link>
-      <Card className="mb-5 p-6">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-cyan/15 text-cyan"><Car className="h-7 w-7" /></span>
-            <div><p className="font-mono text-sm text-muted-foreground">{c.id}</p><h1 className="text-2xl font-semibold">{c.type}</h1></div>
+      <Link to="/agent-sinistre" className="mb-4 inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-primary"><ArrowLeft className="h-4 w-4" />Agent Sinistre</Link>
+      <Card className="relative mb-5 overflow-hidden p-6">
+        <div className="pointer-events-none absolute -right-16 -top-24 h-64 w-64 rounded-full bg-primary/10 blur-3xl" />
+        <div className="relative flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-widest text-primary">Numéro sinistre</p>
+            <h1 className="font-mono text-3xl font-semibold">{c.id}</h1>
+            <div className="mt-3 flex flex-wrap gap-x-6 gap-y-2 text-sm">
+              <span><span className="text-muted-foreground">Client </span><Link to="/clients/$id" params={{ id: client.id }} className="font-semibold hover:text-primary">{client.name}</Link></span>
+              <span><span className="text-muted-foreground">Date </span><b>{fmtFull(c.date)}</b></span>
+              <span><span className="text-muted-foreground">Ville </span><b>{c.city}</b></span>
+              <span className="flex items-center gap-2"><span className="text-muted-foreground">Priorité</span><Prio p={claimPriority(c)} /></span>
+            </div>
           </div>
-          <div className="flex gap-2"><StatusBadge s={c.stage} /><PriorityBadge p={c.priority} /></div>
+          <Field label="Statut" className="w-56"><select className={inputCls} value={c.status} onChange={(e) => { s.updateClaim(c.id, { status: e.target.value as ClaimStatus }, `Statut modifié : ${e.target.value}`); toast.success("Statut mis à jour"); }}>{CLAIM_STATUSES.map((x) => <option key={x}>{x}</option>)}</select></Field>
         </div>
-        <div className="mt-5 grid grid-cols-2 gap-4 md:grid-cols-6">
-          <Info l="Client" v={c.client} /><Info l="Véhicule" v={c.vehicle} /><Info l="Immatriculation" v={c.plate} /><Info l="Date déclaration" v={fmtLong(c.declared)} /><Info l="Statut" v={c.status} /><Info l="Responsable" v={c.operator} />
-        </div>
+        <div className="relative mt-5 flex gap-1">{CLAIM_STATUSES.map((x, i) => <div key={x} title={x} className={cn("h-1.5 flex-1 rounded-full", i <= CLAIM_STATUSES.indexOf(c.status) ? "bg-gradient-primary" : "bg-muted")} />)}</div>
       </Card>
 
-      <div className="grid gap-5 xl:grid-cols-3">
-        <div className="space-y-5 xl:col-span-2">
-          <Card className="border-warning/30 p-5">
-            <div className="flex items-start gap-3">
-              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-warning/15 text-warning"><AlertTriangle className="h-5 w-5" /></span>
-              <div className="flex-1">
-                <p className="text-xs font-semibold uppercase tracking-wider text-warning">Alerte IA</p>
-                <p className="mt-0.5 font-medium">{stale > 0 ? `Ce dossier n’a pas été mis à jour depuis ${stale} jour${stale > 1 ? "s" : ""}.` : c.issue}</p>
-                <p className="mt-2 flex items-center gap-2 text-sm text-primary"><Bot className="h-4 w-4" />Recommandation : {c.nextAction} aujourd’hui.</p>
-              </div>
-            </div>
-            <div className="mt-4 flex flex-wrap gap-2">
-              <Button size="sm" variant="primary" onClick={() => startCall({ ref: c.id, who: ex.cabinet, role: "expert", phone: ex.phone })}><Phone className="h-3.5 w-3.5" />Appeler expert</Button>
-              <Button size="sm" onClick={() => message(c.id, "email", ex.cabinet)}><Mail className="h-3.5 w-3.5" />Envoyer message</Button>
-              <PostponeButton refId={c.id} />
-              <Button size="sm" variant="success" onClick={() => resolve(c.id)}><Check className="h-3.5 w-3.5" />Marquer comme réalisé</Button>
-            </div>
-            <div className="mt-3 flex gap-2">
-              <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Ajouter une note…" className="h-9 flex-1 rounded-xl border border-border bg-surface-2 px-3 text-sm outline-none" />
-              <Button size="sm" variant="soft" disabled={!note} onClick={() => { addNote(c.id, note); setNote(""); }}>Ajouter note</Button>
-            </div>
-          </Card>
-          <Card className="p-5"><Timeline events={c.timeline} /></Card>
-        </div>
+      <div className="grid gap-5 lg:grid-cols-2">
+        <Block title="Informations client" icon={UserRound}>
+          <dl className="divide-y divide-border"><Row k="Nom">{client.name}</Row><Row k="Téléphone"><Phone n={client.phone} /></Row><Row k="Email">{client.email}</Row><Row k="Ville">{client.city}</Row><Row k="Contrat">{c.contract}</Row></dl>
+        </Block>
+        <Block title="Informations véhicule" icon={Car}>
+          <dl className="divide-y divide-border"><Row k="Véhicule">{c.vehicle}</Row><Row k="Immatriculation"><span className="font-mono">{c.plate}</span></Row><Row k="Type de sinistre">{c.type}</Row><Row k="Description">{c.description || "—"}</Row></dl>
+        </Block>
 
-        <div className="space-y-5">
-          <Card className="p-5">
-            <div className="mb-3 flex items-center gap-2"><UserCheck className="h-4 w-4 text-primary" /><h3 className="font-semibold">Expert</h3></div>
-            <p className="font-medium">{ex.name}</p><p className="text-sm text-muted-foreground">{ex.cabinet}</p>
-            <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
-              <Info l="Téléphone" v={ex.phone} /><Info l="Email" v={ex.email} /><Info l="Affectation" v={fmt(c.declared)} /><Info l="Dernier contact" v={fmt(c.expertCalls[0]?.date ?? c.lastUpdate)} /><Info l="Prochaine relance" v={fmt(c.nextFollow)} />
-            </div>
-            <p className="mb-2 mt-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Historique des appels</p>
-            <ul className="space-y-1.5 text-sm">{c.expertCalls.map((x, i) => <li key={i} className="flex gap-2"><span className="tabular-nums text-muted-foreground">{fmt(x.date)}</span>— {x.label}</li>)}</ul>
-            <Button variant="primary" size="sm" className="mt-4 w-full" onClick={() => startCall({ ref: c.id, who: ex.cabinet, role: "expert", phone: ex.phone })}><Phone className="h-3.5 w-3.5" />Appeler l’expert</Button>
-          </Card>
-          <Card className="p-5">
-            <div className="mb-3 flex items-center gap-2"><Wrench className="h-4 w-4 text-cyan" /><h3 className="font-semibold">Garage</h3></div>
-            <p className="font-medium">{ga.name}</p><p className="text-sm text-muted-foreground">{ga.contact} · {ga.city}</p>
-            <div className="mt-3 grid grid-cols-2 gap-3 text-sm"><Info l="Téléphone" v={ga.phone} /><Info l="Dernière relance" v={fmt(c.garageCalls[0]?.date ?? ga.last)} /><Info l="Prochaine relance" v={fmt(c.nextFollow)} /></div>
-            <p className="mb-2 mt-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Statut garage</p>
-            <div className="flex flex-wrap gap-1.5">
-              {GARAGE_STATUSES.map((s) => <button key={s} onClick={() => setGarageStatus(c.id, s)} className={cn("rounded-lg border px-2.5 py-1 text-xs transition-colors", c.garageStatus === s ? "border-cyan/50 bg-cyan/15 text-cyan" : "border-border text-muted-foreground hover:text-foreground")}>{s}</button>)}
-            </div>
-            <ul className="mt-3 space-y-1.5 text-sm">{c.garageCalls.map((x, i) => <li key={i} className="flex gap-2"><span className="tabular-nums text-muted-foreground">{fmt(x.date)}</span>— {x.label}</li>)}</ul>
-            <div className="mt-4 flex gap-2">
-              <Button variant="soft" size="sm" className="flex-1" onClick={() => startCall({ ref: c.id, who: ga.name, role: "garage", phone: ga.phone })}><Phone className="h-3.5 w-3.5" />Appeler le garage</Button>
-              <Button size="icon" variant="ghost" onClick={() => message(c.id, "whatsapp", ga.name)}><MessageCircle className="h-4 w-4" /></Button>
-            </div>
-          </Card>
-        </div>
+        <Block title="Expert" icon={UserRoundCheck} action={ex && <div className="flex gap-1"><Btn size="sm" variant="ghost" onClick={() => setChange(change === "expert" ? "" : "expert")}><Repeat className="h-3.5 w-3.5" />Changer</Btn><Btn size="sm" variant="primary" onClick={() => follow({ title: "Ajouter une relance expert", subtitle: ex.cabinet, results: EXPERT_RESULTS, onSave: (f) => s.followPartner(c.id, "expert", f) })}><History className="h-3.5 w-3.5" />Ajouter une relance</Btn></div>}>
+          {ex && change !== "expert" ? <>
+            <dl className="divide-y divide-border">
+              <Row k="Expert"><Link to="/experts/$id" params={{ id: ex.id }} className="hover:text-primary">{ex.cabinet}</Link><span className="block text-xs font-normal text-muted-foreground">{ex.name}</span></Row>
+              <Row k="Téléphone"><Phone n={ex.phone} /></Row><Row k="Email">{ex.email}</Row><Row k="Ville">{ex.city}</Row>
+              <Row k="Dernière relance">{fmtFull(c.expertLast)}</Row><Row k="Prochaine relance"><NextDate d={c.expertNext} /></Row><Row k="Statut"><Badge s={c.expertStatus} /></Row>
+            </dl>
+            {c.expertFollows.length > 0 && <FollowList list={c.expertFollows} />}
+          </> : <><p className="mb-3 text-sm text-muted-foreground">Experts recommandés à {c.city} :</p><PartnerRecos kind="expert" city={c.city} selected={c.expertId} onPick={(pid) => { s.assign(c.id, "expert", pid); setChange(""); toast.success("Expert affecté"); }} /></>}
+        </Block>
+
+        <Block title="Garage" icon={Wrench} action={ga && <div className="flex gap-1"><Btn size="sm" variant="ghost" onClick={() => setChange(change === "garage" ? "" : "garage")}><Repeat className="h-3.5 w-3.5" />Changer</Btn><Btn size="sm" variant="primary" onClick={() => follow({ title: "Ajouter une relance garage", subtitle: ga.name, results: GARAGE_RESULTS, onSave: (f) => s.followPartner(c.id, "garage", f) })}><History className="h-3.5 w-3.5" />Ajouter une relance</Btn></div>}>
+          {ga && change !== "garage" ? <>
+            <dl className="divide-y divide-border">
+              <Row k="Garage"><Link to="/garages/$id" params={{ id: ga.id }} className="hover:text-primary">{ga.name}</Link><span className="block text-xs font-normal text-muted-foreground">{ga.contact}</span></Row>
+              <Row k="Téléphone"><Phone n={ga.phone} /></Row><Row k="Ville">{ga.city}</Row><Row k="Adresse">{ga.address}</Row>
+              <Row k="Dernière relance">{fmtFull(c.garageLast)}</Row><Row k="Prochaine relance"><NextDate d={c.garageNext} /></Row><Row k="Statut"><Badge s={c.garageStatus} /></Row>
+            </dl>
+            {c.garageFollows.length > 0 && <FollowList list={c.garageFollows} />}
+          </> : <><p className="mb-3 text-sm text-muted-foreground">Garages recommandés à {c.city} :</p><PartnerRecos kind="garage" city={c.city} selected={c.garageId} onPick={(pid) => { s.assign(c.id, "garage", pid); setChange(""); toast.success("Garage affecté"); }} /></>}
+        </Block>
       </div>
+
+      <Block className="mt-5" title="Devis Garage" icon={FileText} action={<Btn size="sm" variant="primary" disabled={!ga} onClick={() => setGq({ amount: "", date: toInput(TODAY), doc: "" })}><Plus className="h-3.5 w-3.5" />Ajouter un devis</Btn>}>
+        {!ga ? <p className="text-sm text-muted-foreground">Affectez d’abord un garage.</p> : !c.garageQuotes.length ? <p className="text-sm text-warning">Aucun devis garage n’a encore été ajouté au dossier.</p> : (
+          <Table head={["Garage", "Date devis", "Montant", "Statut", "Document", ""]}>
+            {c.garageQuotes.map((q) => { const g = s.garages.find((x) => x.id === q.garageId); const lines = [`Devis garage`, `Garage : ${g?.name}`, `Sinistre : ${c.id}`, `Vehicule : ${c.vehicle} ${c.plate}`, `Montant : ${dh(q.amount)}`, `Date : ${fmtFull(q.date)}`]; return (
+              <tr key={q.id}>
+                <td className={cn(td, "font-semibold")}>{g?.name}</td><td className={td}>{fmt(q.date)}</td><td className={cn(td, "font-semibold")}>{dh(q.amount)}</td><td className={td}><Badge s={q.status} /></td>
+                <td className={cn(td, "text-xs text-muted-foreground")}>{q.doc}</td>
+                <td className={td}><div className="flex justify-end gap-1">
+                  <Btn size="sm" variant="ghost" onClick={() => showDoc({ name: q.doc, lines })}><Eye className="h-3.5 w-3.5" />Voir</Btn>
+                  <Btn size="sm" variant="ghost" onClick={() => downloadMock(q.doc, lines)}><Download className="h-3.5 w-3.5" />Télécharger</Btn>
+                  {q.status === "Reçu" && <><Btn size="sm" variant="success" onClick={() => { s.setGarageQuoteStatus(c.id, q.id, "Validé"); toast.success("Devis validé — réparation lancée"); }}>Valider</Btn><Btn size="sm" variant="danger" onClick={() => s.setGarageQuoteStatus(c.id, q.id, "Refusé")}>Refuser</Btn></>}
+                </div></td>
+              </tr>); })}
+          </Table>
+        )}
+      </Block>
+
+      <div className="mt-5 grid gap-5 lg:grid-cols-[1.4fr_1fr]">
+        <Block title="Documents" icon={FolderOpen} action={<Btn size="sm" variant="primary" onClick={() => setDoc({ category: DOC_CATEGORIES[0], name: "" })}><Plus className="h-3.5 w-3.5" />Ajouter un document</Btn>}>
+          <div className="space-y-3">
+            {DOC_CATEGORIES.map((cat) => { const list = c.docs.filter((d) => d.category === cat); return (
+              <div key={cat}>
+                <p className="mb-1 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{cat}{!list.length && <span className="font-normal normal-case text-warning">· manquant</span>}</p>
+                {list.map((d) => (
+                  <div key={d.id} className="flex items-center gap-3 rounded-xl bg-surface-2 px-3 py-2 text-sm">
+                    <FileText className="h-4 w-4 text-primary" /><span className="flex-1 truncate font-medium">{d.name}</span><span className="hidden text-xs text-muted-foreground sm:inline">{d.category} · ajouté le {fmt(d.date)}</span>
+                    <Btn size="icon" variant="ghost" title="Voir" onClick={() => showDoc({ name: d.name, lines: docLines(d.name, d.category) })}><Eye className="h-4 w-4" /></Btn>
+                    <Btn size="sm" variant="soft" onClick={() => downloadMock(d.name, docLines(d.name, d.category))}><Download className="h-3.5 w-3.5" />Télécharger</Btn>
+                  </div>))}
+              </div>); })}
+          </div>
+        </Block>
+        <Block title="Historique" icon={History}><Timeline events={c.history} /></Block>
+      </div>
+
+      <Modal open={!!gq} onClose={() => setGq(null)} title="Ajouter un devis garage" description={ga?.name}>
+        {gq && <div className="grid gap-3 sm:grid-cols-2">
+          <Field label="Montant (DH)"><input type="number" className={inputCls} value={gq.amount} onChange={(e) => setGq({ ...gq, amount: e.target.value })} /></Field>
+          <Field label="Date du devis"><input type="date" className={inputCls} value={gq.date} onChange={(e) => setGq({ ...gq, date: e.target.value })} /></Field>
+          <Field label="Document PDF" className="sm:col-span-2"><FilePick accept=".pdf" value={gq.doc} onPick={(n) => setGq({ ...gq, doc: n[0] ?? "" })} /></Field>
+        </div>}
+        <div className="flex justify-end gap-2"><Btn onClick={() => setGq(null)}>Annuler</Btn><Btn variant="primary" onClick={() => { if (!gq || !Number(gq.amount)) return toast.error("Montant obligatoire"); s.addGarageQuote(c.id, { amount: Number(gq.amount), date: fromInput(gq.date) ?? TODAY, doc: gq.doc || `devis-garage-${c.id}.pdf` }); toast.success("Devis garage ajouté"); setGq(null); }}>Ajouter</Btn></div>
+      </Modal>
+      <Modal open={!!doc} onClose={() => setDoc(null)} title="Ajouter un document">
+        {doc && <div className="grid gap-3">
+          <Field label="Catégorie"><select className={inputCls} value={doc.category} onChange={(e) => setDoc({ ...doc, category: e.target.value })}>{DOC_CATEGORIES.map((x) => <option key={x}>{x}</option>)}</select></Field>
+          <Field label="Fichier"><FilePick value={doc.name} onPick={(n) => setDoc({ ...doc, name: n[0] ?? "" })} /></Field>
+        </div>}
+        <div className="flex justify-end gap-2"><Btn onClick={() => setDoc(null)}>Annuler</Btn><Btn variant="primary" onClick={() => { if (!doc?.name) return toast.error("Choisissez un fichier"); s.addDoc(c.id, doc); toast.success("Document ajouté"); setDoc(null); }}>Ajouter</Btn></div>
+      </Modal>
+      {followEl}{docEl}
     </Shell>
+  );
+}
+
+function FollowList({ list }: { list: { date: Date; result: string; comment: string }[] }) {
+  return (
+    <div className="mt-3 space-y-1.5 border-t border-border pt-3">
+      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Relances</p>
+      {[...list].reverse().slice(0, 4).map((f, i) => <p key={i} className="text-sm"><span className="font-mono text-xs text-muted-foreground">{fmt(f.date)}</span> · <b>{f.result}</b>{f.comment && <span className="text-muted-foreground"> — {f.comment}</span>}</p>)}
+    </div>
   );
 }
