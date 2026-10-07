@@ -1,5 +1,4 @@
 import { useNavigate } from "@tanstack/react-router";
-import { motion } from "framer-motion";
 import { Clock, Wrench, UserCheck } from "lucide-react";
 import { useState } from "react";
 import { useStore } from "@/lib/store";
@@ -24,7 +23,7 @@ export function ClaimsBoard() {
               {list.map((c) => {
                 const ex = expertById(c.expertId), ga = garageById(c.garageId);
                 return (
-                  <motion.div layout layoutId={c.id} key={c.id} draggable onDragStart={(e) => (e as unknown as DragEvent).dataTransfer?.setData("id", c.id)}
+                  <div key={c.id} draggable onDragStart={(e) => e.dataTransfer.setData("id", c.id)}
                     onClick={() => nav({ to: "/sinistres/$id", params: { id: c.id } })}
                     className={cn("cursor-grab rounded-xl border border-border bg-card p-3 text-xs shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/40 active:cursor-grabbing", c.priority === "critique" && "border-l-2 border-l-destructive")}>
                     <div className="flex items-center justify-between"><span className="font-mono text-[11px] text-muted-foreground">{c.id}</span><PriorityBadge p={c.priority} /></div>
@@ -36,7 +35,7 @@ export function ClaimsBoard() {
                       <p className="flex items-center gap-1.5"><Clock className="h-3 w-3" />{daysSince(c.declared)} j · {c.lastAction}</p>
                     </div>
                     <p className="mt-2 rounded-lg bg-primary/10 px-2 py-1 font-medium text-primary">→ {c.nextAction}</p>
-                  </motion.div>
+                  </div>
                 );
               })}
             </div>
