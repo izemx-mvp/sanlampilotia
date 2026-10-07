@@ -15,6 +15,7 @@ import { Route as AgentSinistreRouteImport } from './routes/agent-sinistre'
 import { Route as AnalyticsRouteImport } from './routes/analytics'
 import { Route as IntervenantsRouteImport } from './routes/intervenants'
 import { Route as ParametresRouteImport } from './routes/parametres'
+import { Route as ApiChatRouteImport } from './routes/api/chat'
 import { Route as ClientsIdRouteImport } from './routes/clients.$id'
 import { Route as ExpertsIdRouteImport } from './routes/experts.$id'
 import { Route as GaragesIdRouteImport } from './routes/garages.$id'
@@ -50,6 +51,11 @@ const ParametresRoute = ParametresRouteImport.update({
   path: '/parametres',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiChatRoute = ApiChatRouteImport.update({
+  id: '/api/chat',
+  path: '/api/chat',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ClientsIdRoute = ClientsIdRouteImport.update({
   id: '/clients/$id',
   path: '/clients/$id',
@@ -78,6 +84,7 @@ export interface FileRoutesByFullPath {
   '/analytics': typeof AnalyticsRoute
   '/intervenants': typeof IntervenantsRoute
   '/parametres': typeof ParametresRoute
+  '/api/chat': typeof ApiChatRoute
   '/clients/$id': typeof ClientsIdRoute
   '/experts/$id': typeof ExpertsIdRoute
   '/garages/$id': typeof GaragesIdRoute
@@ -90,6 +97,7 @@ export interface FileRoutesByTo {
   '/analytics': typeof AnalyticsRoute
   '/intervenants': typeof IntervenantsRoute
   '/parametres': typeof ParametresRoute
+  '/api/chat': typeof ApiChatRoute
   '/clients/$id': typeof ClientsIdRoute
   '/experts/$id': typeof ExpertsIdRoute
   '/garages/$id': typeof GaragesIdRoute
@@ -103,6 +111,7 @@ export interface FileRoutesById {
   '/analytics': typeof AnalyticsRoute
   '/intervenants': typeof IntervenantsRoute
   '/parametres': typeof ParametresRoute
+  '/api/chat': typeof ApiChatRoute
   '/clients/$id': typeof ClientsIdRoute
   '/experts/$id': typeof ExpertsIdRoute
   '/garages/$id': typeof GaragesIdRoute
@@ -117,6 +126,7 @@ export interface FileRouteTypes {
     | '/analytics'
     | '/intervenants'
     | '/parametres'
+    | '/api/chat'
     | '/clients/$id'
     | '/experts/$id'
     | '/garages/$id'
@@ -129,6 +139,7 @@ export interface FileRouteTypes {
     | '/analytics'
     | '/intervenants'
     | '/parametres'
+    | '/api/chat'
     | '/clients/$id'
     | '/experts/$id'
     | '/garages/$id'
@@ -141,6 +152,7 @@ export interface FileRouteTypes {
     | '/analytics'
     | '/intervenants'
     | '/parametres'
+    | '/api/chat'
     | '/clients/$id'
     | '/experts/$id'
     | '/garages/$id'
@@ -154,6 +166,7 @@ export interface RootRouteChildren {
   AnalyticsRoute: typeof AnalyticsRoute
   IntervenantsRoute: typeof IntervenantsRoute
   ParametresRoute: typeof ParametresRoute
+  ApiChatRoute: typeof ApiChatRoute
   ClientsIdRoute: typeof ClientsIdRoute
   ExpertsIdRoute: typeof ExpertsIdRoute
   GaragesIdRoute: typeof GaragesIdRoute
@@ -204,6 +217,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ParametresRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/chat': {
+      id: '/api/chat'
+      path: '/api/chat'
+      fullPath: '/api/chat'
+      preLoaderRoute: typeof ApiChatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/clients/$id': {
       id: '/clients/$id'
       path: '/clients/$id'
@@ -242,6 +262,7 @@ const rootRouteChildren: RootRouteChildren = {
   AnalyticsRoute: AnalyticsRoute,
   IntervenantsRoute: IntervenantsRoute,
   ParametresRoute: ParametresRoute,
+  ApiChatRoute: ApiChatRoute,
   ClientsIdRoute: ClientsIdRoute,
   ExpertsIdRoute: ExpertsIdRoute,
   GaragesIdRoute: GaragesIdRoute,
