@@ -16,6 +16,7 @@ import { Route as AnalyticsRouteImport } from './routes/analytics'
 import { Route as ClientsRouteImport } from './routes/clients'
 import { Route as HistoriqueRouteImport } from './routes/historique'
 import { Route as IntervenantsRouteImport } from './routes/intervenants'
+import { Route as LoginRouteImport } from './routes/login'
 import { Route as NotificationsRouteImport } from './routes/notifications'
 import { Route as ParametresRouteImport } from './routes/parametres'
 import { Route as SuiviRouteImport } from './routes/suivi'
@@ -58,6 +59,11 @@ const IntervenantsRoute = IntervenantsRouteImport.update({
   path: '/intervenants',
   getParentRoute: () => rootRouteImport,
 } as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const NotificationsRoute = NotificationsRouteImport.update({
   id: '/notifications',
   path: '/notifications',
@@ -97,6 +103,7 @@ export interface FileRoutesByFullPath {
   '/clients': typeof ClientsRoute
   '/historique': typeof HistoriqueRoute
   '/intervenants': typeof IntervenantsRoute
+  '/login': typeof LoginRoute
   '/notifications': typeof NotificationsRoute
   '/parametres': typeof ParametresRoute
   '/suivi': typeof SuiviRoute
@@ -112,6 +119,7 @@ export interface FileRoutesByTo {
   '/clients': typeof ClientsRoute
   '/historique': typeof HistoriqueRoute
   '/intervenants': typeof IntervenantsRoute
+  '/login': typeof LoginRoute
   '/notifications': typeof NotificationsRoute
   '/parametres': typeof ParametresRoute
   '/suivi': typeof SuiviRoute
@@ -128,6 +136,7 @@ export interface FileRoutesById {
   '/clients': typeof ClientsRoute
   '/historique': typeof HistoriqueRoute
   '/intervenants': typeof IntervenantsRoute
+  '/login': typeof LoginRoute
   '/notifications': typeof NotificationsRoute
   '/parametres': typeof ParametresRoute
   '/suivi': typeof SuiviRoute
@@ -145,6 +154,7 @@ export interface FileRouteTypes {
     | '/clients'
     | '/historique'
     | '/intervenants'
+    | '/login'
     | '/notifications'
     | '/parametres'
     | '/suivi'
@@ -160,6 +170,7 @@ export interface FileRouteTypes {
     | '/clients'
     | '/historique'
     | '/intervenants'
+    | '/login'
     | '/notifications'
     | '/parametres'
     | '/suivi'
@@ -175,6 +186,7 @@ export interface FileRouteTypes {
     | '/clients'
     | '/historique'
     | '/intervenants'
+    | '/login'
     | '/notifications'
     | '/parametres'
     | '/suivi'
@@ -191,6 +203,7 @@ export interface RootRouteChildren {
   ClientsRoute: typeof ClientsRoute
   HistoriqueRoute: typeof HistoriqueRoute
   IntervenantsRoute: typeof IntervenantsRoute
+  LoginRoute: typeof LoginRoute
   NotificationsRoute: typeof NotificationsRoute
   ParametresRoute: typeof ParametresRoute
   SuiviRoute: typeof SuiviRoute
@@ -250,6 +263,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IntervenantsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/notifications': {
       id: '/notifications'
       path: '/notifications'
@@ -303,6 +323,7 @@ const rootRouteChildren: RootRouteChildren = {
   ClientsRoute: ClientsRoute,
   HistoriqueRoute: HistoriqueRoute,
   IntervenantsRoute: IntervenantsRoute,
+  LoginRoute: LoginRoute,
   NotificationsRoute: NotificationsRoute,
   ParametresRoute: ParametresRoute,
   SuiviRoute: SuiviRoute,
