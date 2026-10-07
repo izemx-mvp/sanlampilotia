@@ -1,54 +1,81 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { Mail, Phone, Building2, Wrench } from "lucide-react";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { Eye, FileSpreadsheet, Pencil, Plus, Search, Trash2 } from "lucide-react";
 import { useState } from "react";
+import { toast } from "sonner";
 import { Shell } from "@/components/app/Shell";
-import { Avatar, Button, Card, PageHeader, Progress, Tabs } from "@/components/app/ui";
-import { useStore } from "@/lib/store";
-import { experts, garages, fmt } from "@/lib/mock";
-import { cn } from "@/lib/utils";
+import { Badge, Btn, Card, PageHeader, Phone, Sel, Table, Tabs, inputCls, rowCls, td } from "@/components/app/ui";
+import { Confirm, ImportDialog, PartnerDialog } from "@/components/app/dialogs";
+import { useStore, type PartnerKind } from "@/lib/store";
+import { CITIES, norm, type Claim, type Expert, type Garage } from "@/lib/data";
 import { pageHead } from "@/lib/head";
+import { cn } from "@/lib/utils";
 
-export const Route = createFileRoute("/intervenants")({ head: pageHead("Intervenants", "Annuaire et performance des experts, garages et partenaires."), component: Intervenants });
+export const Route = createFileRoute("/intervenants")({ head: pageHead("Experts & Garagistes", "Gérez vos experts et garages partenaires : ajout, modification, import Excel / CSV."), component: Partners });
 
-const PARTNERS = [{ name: "SANLAM Maroc — Gestion sinistres", kind: "Compagnie", phone: "05 22 43 96 00" }, { name: "Dépannage Atlas Assistance", kind: "Assistance", phone: "05 22 99 11 22" }, { name: "Vitrage Express Maroc", kind: "Bris de glace", phone: "05 22 30 40 50" }];
+export const partnerLoad = (claims: Claim[], kind: PartnerKind, id: string) => {
+  const mine = claims.filter((c) => (kind === "expert" ? c.expertId : c.garageId) === id);
+  const done = mine.filter((c) => (kind === "expert" ? c.expertStatus === "Rapport reçu" : c.garageStatus === "Véhicule prêt") || c.status === "Clôturé");
+  return { mine, current: mine.length - done.length, done: done.length };
+};
 
-function Intervenants() {
-  const { startCall, clients } = useStore();
-  const [t, setT] = useState("experts");
-  const list = t === "experts" ? experts.map((e) => ({ id: e.id, name: e.cabinet, sub: e.name, phone: e.phone, email: e.email, active: e.active, delay: e.delay, late: e.late, rate: e.rate, last: e.last, role: "expert" as const }))
-    : garages.map((g) => ({ id: g.id, name: g.name, sub: `${g.contact} · ${g.city}`, phone: g.phone, email: `contact@${g.name.toLowerCase().replace(/[^a-z]/g, "")}.ma`, active: g.active, delay: g.delay, late: g.late, rate: g.rate, last: g.last, role: "garage" as const }));
+function Partners() {
+  const s = useStore();
+  const nav = useNavigate();
+  const [tab, setTab] = useState<PartnerKind>("expert");
+  const [q, setQ] = useState(""); const [city, setCity] = useState(""); const [st, setSt] = useState("");
+  const [edit, setEdit] = useState<{ item: Expert | Garage | null } | null>(null);
+  const [imp, setImp] = useState(false);
+  const [del, setDel] = useState<Expert | Garage | null>(null);
+  const list = (tab === "expert" ? s.experts : s.garages) as (Expert | Garage)[];
+  const rows = list.filter((p) => (!city || p.city === city) && (!st || p.status === st) && (!q || norm(Object.values(p).join(" ")).includes(norm(q))));
+  const open = (p: Expert | Garage) => (tab === "expert" ? nav({ to: "/experts/$id", params: { id: p.id } }) : nav({ to: "/garages/$id", params: { id: p.id } }));
+  const Actions = ({ p }: { p: Expert | Garage }) => (
+    <div className="flex justify-end gap-1" onClick={(e) => e.stopPropagation()}>
+      <Btn size="icon" variant="ghost" title="Consulter la fiche" onClick={() => open(p)}><Eye className="h-4 w-4" /></Btn>
+      <Btn size="icon" variant="ghost" title="Modifier" onClick={() => setEdit({ item: p })}><Pencil className="h-4 w-4" /></Btn>
+      <Btn size="icon" variant="ghost" title="Supprimer" className="hover:text-destructive" onClick={() => setDel(p)}><Trash2 className="h-4 w-4" /></Btn>
+    </div>
+  );
   return (
     <Shell>
-      <PageHeader title="Intervenants" subtitle="Experts, garages, clients et partenaires avec indicateurs de performance." />
-      <div className="mb-5"><Tabs value={t} onChange={setT} tabs={[{ id: "experts", label: "Experts", count: experts.length }, { id: "garages", label: "Garages", count: garages.length }, { id: "clients", label: "Clients", count: clients.length }, { id: "autres", label: "Autres partenaires", count: PARTNERS.length }]} /></div>
-      {(t === "experts" || t === "garages") && (
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {list.map((x, i) => {
-            const perf = Math.round(x.rate * 0.7 + (5 - x.delay) * 6 - x.late * 2);
-            return (
-              <Card key={x.id} delay={i * 0.03} className="p-5 transition-all hover:-translate-y-0.5 hover:border-primary/30">
-                <div className="flex items-start gap-3">
-                  <span className={cn("flex h-11 w-11 items-center justify-center rounded-xl", t === "experts" ? "bg-primary/15 text-primary" : "bg-cyan/15 text-cyan")}>{t === "experts" ? <Building2 className="h-5 w-5" /> : <Wrench className="h-5 w-5" />}</span>
-                  <div className="flex-1"><p className="font-semibold">{x.name}</p><p className="text-xs text-muted-foreground">{x.sub}</p></div>
-                  <span className={cn("rounded-lg px-2 py-1 font-display text-sm font-semibold", perf >= 75 ? "bg-success/15 text-success" : perf >= 60 ? "bg-warning/15 text-warning" : "bg-destructive/15 text-destructive")}>{perf}</span>
-                </div>
-                <div className="mt-4 grid grid-cols-3 gap-2 text-center">
-                  <div className="rounded-xl bg-surface-2 p-2"><p className="font-display text-lg font-semibold">{x.active}</p><p className="text-[10px] text-muted-foreground">dossiers</p></div>
-                  <div className="rounded-xl bg-surface-2 p-2"><p className="font-display text-lg font-semibold">{String(x.delay).replace(".", ",")} j</p><p className="text-[10px] text-muted-foreground">délai moyen</p></div>
-                  <div className="rounded-xl bg-surface-2 p-2"><p className={cn("font-display text-lg font-semibold", x.late > 2 && "text-destructive")}>{x.late}</p><p className="text-[10px] text-muted-foreground">en retard</p></div>
-                </div>
-                <div className="mt-4"><div className="mb-1 flex justify-between text-xs"><span className="text-muted-foreground">Taux de réponse</span><span>{x.rate} %</span></div><Progress value={x.rate} tone={x.rate > 85 ? "bg-success" : "bg-warning"} /></div>
-                <div className="mt-4 flex items-center justify-between text-xs text-muted-foreground">
-                  <span>Dernière interaction {fmt(x.last)}</span>
-                  <div className="flex gap-1"><Button size="icon" variant="soft" onClick={() => startCall({ ref: x.id, who: x.name, role: x.role, phone: x.phone })}><Phone className="h-4 w-4" /></Button><Button size="icon" variant="ghost" title={x.email}><Mail className="h-4 w-4" /></Button></div>
-                </div>
-              </Card>
-            );
-          })}
-        </div>
-      )}
-      {t === "clients" && <Card className="divide-y divide-border">{clients.slice(0, 30).map((c) => <div key={c.id} className="flex items-center gap-3 px-5 py-3"><Avatar name={c.name} /><div className="flex-1"><p className="font-medium">{c.name}</p><p className="text-xs text-muted-foreground">{c.phone} · {c.email}</p></div><span className="text-xs text-muted-foreground">{c.contracts} contrat(s)</span></div>)}</Card>}
-      {t === "autres" && <div className="grid gap-4 md:grid-cols-3">{PARTNERS.map((p) => <Card key={p.name} className="p-5"><p className="font-semibold">{p.name}</p><p className="text-sm text-muted-foreground">{p.kind} · {p.phone}</p></Card>)}</div>}
+      <PageHeader eyebrow="Partenaires" title="Experts & Garagistes" subtitle="Toutes les coordonnées de vos partenaires et leur charge de dossiers." actions={<>
+        <Btn onClick={() => setImp(true)}><FileSpreadsheet className="h-4 w-4 text-success" />Importer Excel / CSV</Btn>
+        <Btn variant="primary" onClick={() => setEdit({ item: null })}><Plus className="h-4 w-4" />{tab === "expert" ? "Ajouter un expert" : "Ajouter un garage"}</Btn>
+      </>} />
+      <div className="mb-4 flex flex-wrap items-center gap-3">
+        <Tabs id="pt-tabs" value={tab} onChange={(v) => setTab(v as PartnerKind)} tabs={[{ id: "expert", label: "Experts", count: s.experts.length }, { id: "garage", label: "Garagistes", count: s.garages.length }]} />
+        <div className="relative min-w-[220px] flex-1 md:max-w-xs"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><input className={cn(inputCls, "pl-9")} placeholder="Nom, téléphone, email…" value={q} onChange={(e) => setQ(e.target.value)} /></div>
+        <Sel label="Ville" value={city} onChange={setCity} options={CITIES} />
+        <Sel label="Statut" value={st} onChange={setSt} options={["Actif", "Inactif"]} />
+      </div>
+      <Card className="overflow-hidden">
+        {tab === "expert" ? (
+          <Table head={["Expert", "Cabinet", "Ville", "Téléphone", "Email", "Adresse", "Spécialité", "En cours", "Traités", "Statut", ""]} empty={!rows.length}>
+            {(rows as Expert[]).map((e) => { const l = partnerLoad(s.claims, "expert", e.id); return (
+              <tr key={e.id} className={rowCls} onClick={() => open(e)}>
+                <td className={cn(td, "whitespace-nowrap font-semibold")}>{e.name}</td><td className={cn(td, "min-w-[180px]")}>{e.cabinet}</td><td className={td}>{e.city}</td>
+                <td className={td}><Phone n={e.phone} /></td><td className={cn(td, "text-xs text-muted-foreground")}>{e.email}</td><td className={cn(td, "min-w-[180px] text-xs text-muted-foreground")}>{e.address}</td>
+                <td className={td}>{e.specialty}</td><td className={cn(td, "text-center font-semibold")}>{l.current}</td><td className={cn(td, "text-center")}>{e.treated + l.done}</td>
+                <td className={td}><Badge s={e.status} /></td><td className={td}><Actions p={e} /></td>
+              </tr>); })}
+          </Table>
+        ) : (
+          <Table head={["Garage", "Ville", "Adresse", "Téléphone", "Email", "Contact principal", "Véhicules", "En cours", "Traités", "Statut", ""]} empty={!rows.length}>
+            {(rows as Garage[]).map((g) => { const l = partnerLoad(s.claims, "garage", g.id); return (
+              <tr key={g.id} className={rowCls} onClick={() => open(g)}>
+                <td className={cn(td, "min-w-[170px] font-semibold")}>{g.name}</td><td className={td}>{g.city}</td><td className={cn(td, "min-w-[180px] text-xs text-muted-foreground")}>{g.address}</td>
+                <td className={td}><Phone n={g.phone} /></td><td className={cn(td, "text-xs text-muted-foreground")}>{g.email}</td><td className={cn(td, "whitespace-nowrap")}>{g.contact}</td>
+                <td className={cn(td, "min-w-[140px] text-xs")}>{g.vehicles}</td><td className={cn(td, "text-center font-semibold")}>{l.current}</td><td className={cn(td, "text-center")}>{g.treated + l.done}</td>
+                <td className={td}><Badge s={g.status} /></td><td className={td}><Actions p={g} /></td>
+              </tr>); })}
+          </Table>
+        )}
+      </Card>
+      <PartnerDialog kind={tab} open={!!edit} item={edit?.item} onClose={() => setEdit(null)} />
+      <ImportDialog kind={tab} open={imp} onClose={() => setImp(false)} />
+      <Confirm open={!!del} onClose={() => setDel(null)} title={`Supprimer ${del && "cabinet" in del ? del.cabinet : del?.name} ?`} onConfirm={() => { if (del) { s.deletePartner(tab, del.id); toast.success("Supprimé"); } }}>
+        <p className="text-sm text-muted-foreground">Cette action retire le partenaire de la liste.</p>
+      </Confirm>
     </Shell>
   );
 }

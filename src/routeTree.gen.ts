@@ -15,6 +15,7 @@ import { Route as AgentSinistreRouteImport } from './routes/agent-sinistre'
 import { Route as AnalyticsRouteImport } from './routes/analytics'
 import { Route as IntervenantsRouteImport } from './routes/intervenants'
 import { Route as ParametresRouteImport } from './routes/parametres'
+import { Route as ClientsIdRouteImport } from './routes/clients.$id'
 import { Route as SinistresIdRouteImport } from './routes/sinistres.$id'
 
 const IndexRoute = IndexRouteImport.update({
@@ -47,6 +48,11 @@ const ParametresRoute = ParametresRouteImport.update({
   path: '/parametres',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ClientsIdRoute = ClientsIdRouteImport.update({
+  id: '/clients/$id',
+  path: '/clients/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SinistresIdRoute = SinistresIdRouteImport.update({
   id: '/sinistres/$id',
   path: '/sinistres/$id',
@@ -60,6 +66,7 @@ export interface FileRoutesByFullPath {
   '/analytics': typeof AnalyticsRoute
   '/intervenants': typeof IntervenantsRoute
   '/parametres': typeof ParametresRoute
+  '/clients/$id': typeof ClientsIdRoute
   '/sinistres/$id': typeof SinistresIdRoute
 }
 export interface FileRoutesByTo {
@@ -69,6 +76,7 @@ export interface FileRoutesByTo {
   '/analytics': typeof AnalyticsRoute
   '/intervenants': typeof IntervenantsRoute
   '/parametres': typeof ParametresRoute
+  '/clients/$id': typeof ClientsIdRoute
   '/sinistres/$id': typeof SinistresIdRoute
 }
 export interface FileRoutesById {
@@ -79,6 +87,7 @@ export interface FileRoutesById {
   '/analytics': typeof AnalyticsRoute
   '/intervenants': typeof IntervenantsRoute
   '/parametres': typeof ParametresRoute
+  '/clients/$id': typeof ClientsIdRoute
   '/sinistres/$id': typeof SinistresIdRoute
 }
 export interface FileRouteTypes {
@@ -90,6 +99,7 @@ export interface FileRouteTypes {
     | '/analytics'
     | '/intervenants'
     | '/parametres'
+    | '/clients/$id'
     | '/sinistres/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -99,6 +109,7 @@ export interface FileRouteTypes {
     | '/analytics'
     | '/intervenants'
     | '/parametres'
+    | '/clients/$id'
     | '/sinistres/$id'
   id:
     | '__root__'
@@ -108,6 +119,7 @@ export interface FileRouteTypes {
     | '/analytics'
     | '/intervenants'
     | '/parametres'
+    | '/clients/$id'
     | '/sinistres/$id'
   fileRoutesById: FileRoutesById
 }
@@ -118,6 +130,7 @@ export interface RootRouteChildren {
   AnalyticsRoute: typeof AnalyticsRoute
   IntervenantsRoute: typeof IntervenantsRoute
   ParametresRoute: typeof ParametresRoute
+  ClientsIdRoute: typeof ClientsIdRoute
   SinistresIdRoute: typeof SinistresIdRoute
 }
 
@@ -165,6 +178,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ParametresRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/clients/$id': {
+      id: '/clients/$id'
+      path: '/clients/$id'
+      fullPath: '/clients/$id'
+      preLoaderRoute: typeof ClientsIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/sinistres/$id': {
       id: '/sinistres/$id'
       path: '/sinistres/$id'
@@ -182,6 +202,7 @@ const rootRouteChildren: RootRouteChildren = {
   AnalyticsRoute: AnalyticsRoute,
   IntervenantsRoute: IntervenantsRoute,
   ParametresRoute: ParametresRoute,
+  ClientsIdRoute: ClientsIdRoute,
   SinistresIdRoute: SinistresIdRoute,
 }
 export const routeTree = rootRouteImport
