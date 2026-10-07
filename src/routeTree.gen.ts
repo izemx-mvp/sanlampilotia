@@ -10,33 +10,102 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AgentClientRouteImport } from './routes/agent-client'
+import { Route as AgentSinistreRouteImport } from './routes/agent-sinistre'
+import { Route as ClientsRouteImport } from './routes/clients'
+import { Route as SuiviRouteImport } from './routes/suivi'
+import { Route as SinistresIndexRouteImport } from './routes/sinistres.index'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AgentClientRoute = AgentClientRouteImport.update({
+  id: '/agent-client',
+  path: '/agent-client',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AgentSinistreRoute = AgentSinistreRouteImport.update({
+  id: '/agent-sinistre',
+  path: '/agent-sinistre',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ClientsRoute = ClientsRouteImport.update({
+  id: '/clients',
+  path: '/clients',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SuiviRoute = SuiviRouteImport.update({
+  id: '/suivi',
+  path: '/suivi',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SinistresIndexRoute = SinistresIndexRouteImport.update({
+  id: '/sinistres/',
+  path: '/sinistres/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/agent-client': typeof AgentClientRoute
+  '/agent-sinistre': typeof AgentSinistreRoute
+  '/clients': typeof ClientsRoute
+  '/suivi': typeof SuiviRoute
+  '/sinistres/': typeof SinistresIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/agent-client': typeof AgentClientRoute
+  '/agent-sinistre': typeof AgentSinistreRoute
+  '/clients': typeof ClientsRoute
+  '/suivi': typeof SuiviRoute
+  '/sinistres': typeof SinistresIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/agent-client': typeof AgentClientRoute
+  '/agent-sinistre': typeof AgentSinistreRoute
+  '/clients': typeof ClientsRoute
+  '/suivi': typeof SuiviRoute
+  '/sinistres/': typeof SinistresIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/agent-client'
+    | '/agent-sinistre'
+    | '/clients'
+    | '/suivi'
+    | '/sinistres/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/agent-client'
+    | '/agent-sinistre'
+    | '/clients'
+    | '/suivi'
+    | '/sinistres'
+  id:
+    | '__root__'
+    | '/'
+    | '/agent-client'
+    | '/agent-sinistre'
+    | '/clients'
+    | '/suivi'
+    | '/sinistres/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AgentClientRoute: typeof AgentClientRoute
+  AgentSinistreRoute: typeof AgentSinistreRoute
+  ClientsRoute: typeof ClientsRoute
+  SuiviRoute: typeof SuiviRoute
+  SinistresIndexRoute: typeof SinistresIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -48,11 +117,51 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/agent-client': {
+      id: '/agent-client'
+      path: '/agent-client'
+      fullPath: '/agent-client'
+      preLoaderRoute: typeof AgentClientRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/agent-sinistre': {
+      id: '/agent-sinistre'
+      path: '/agent-sinistre'
+      fullPath: '/agent-sinistre'
+      preLoaderRoute: typeof AgentSinistreRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/clients': {
+      id: '/clients'
+      path: '/clients'
+      fullPath: '/clients'
+      preLoaderRoute: typeof ClientsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/suivi': {
+      id: '/suivi'
+      path: '/suivi'
+      fullPath: '/suivi'
+      preLoaderRoute: typeof SuiviRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sinistres/': {
+      id: '/sinistres/'
+      path: '/sinistres'
+      fullPath: '/sinistres/'
+      preLoaderRoute: typeof SinistresIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AgentClientRoute: AgentClientRoute,
+  AgentSinistreRoute: AgentSinistreRoute,
+  ClientsRoute: ClientsRoute,
+  SuiviRoute: SuiviRoute,
+  SinistresIndexRoute: SinistresIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
