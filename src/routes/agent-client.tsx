@@ -1,89 +1,180 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { motion } from "framer-motion";
-import { Bot, CalendarClock, CreditCard, FileText, FileX, Info, Mail, MessageCircle, Phone, Eye, Check, UserPlus } from "lucide-react";
-import { useState } from "react";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { CheckCircle2, Download, Eye, FileText, History, Plus, Search } from "lucide-react";
+import { useMemo, useState } from "react";
+import { toast } from "sonner";
 import { Shell } from "@/components/app/Shell";
-import { Avatar, Button, Card, Counter, PageHeader, PriorityBadge, Pulse, Select, StatusBadge } from "@/components/app/ui";
-import { PostponeButton } from "@/components/app/actions";
+import { Badge, Btn, Card, Field, Modal, NextDate, PageHeader, Phone, ProgressBar, RecoPanel, Sel, Table, Tabs, Timeline, downloadMock, inputCls, rowCls, td } from "@/components/app/ui";
+import { ActionsTable } from "@/components/app/ActionsTable";
+import { QuoteDialog, useDocViewer, useFollowDialog } from "@/components/app/dialogs";
 import { useStore } from "@/lib/store";
-import { CLIENT_STATUSES, OPERATORS, fmt, TODAY } from "@/lib/mock";
-import { byPriority } from "@/lib/items";
-import { cn } from "@/lib/utils";
+import { buildActions } from "@/lib/actions";
+import { CITIES, MISSING_RESULTS, PAY_RESULTS, PAY_STATUSES, QUOTE_RESULTS, QUOTE_STATUSES, diffDays, dh, fmt, fmtFull, norm, payStatus, type Quote, type QuoteStatus } from "@/lib/data";
 import { pageHead } from "@/lib/head";
+import { cn } from "@/lib/utils";
 
-export const Route = createFileRoute("/agent-client")({ head: pageHead("Agent IA Suivi Client", "Clients et prospects à relancer détectés automatiquement."), component: AgentClient });
+export const Route = createFileRoute("/agent-client")({
+  validateSearch: (s: Record<string, unknown>): { tab?: string } => ({ tab: typeof s.tab === "string" ? s.tab : undefined }),
+  head: pageHead("Agent IA — Suivi Client", "Devis, paiements et informations manquantes : les relances clients identifiées automatiquement."),
+  component: AgentClient,
+});
 
-const CATS = [
-  { id: "Documents manquants", icon: FileX }, { id: "Règlements non payés", icon: CreditCard }, { id: "Devis en attente", icon: FileText },
-  { id: "Prospects à relancer", icon: UserPlus }, { id: "Contrats arrivant à échéance", icon: CalendarClock }, { id: "Informations manquantes", icon: Info },
-];
+const matchDue = (d: Date | undefined, f: string) => !f || (!!d && (f === "Aujourd’hui" ? diffDays(d) === 0 : f === "En retard" ? diffDays(d) < 0 : diffDays(d) >= 0 && diffDays(d) <= 7));
 
-export function ClientFollowTable({ only }: { only?: "Client" | "Prospect" }) {
-  const { clients, openClient, startCall, message, resolve } = useStore();
-  const [cat, setCat] = useState(""); const [status, setStatus] = useState(""); const [op, setOp] = useState(""); const [q, setQ] = useState("");
-  const rows = clients.filter((c) => (!only || c.type === only) && (!cat || c.category === cat) && (!status || c.status === status) && (!op || c.operator === op) && (!q || c.name.toLowerCase().includes(q.toLowerCase()))).sort(byPriority);
+function AgentClient() {
+  const s = useStore();
+  const nav = useNavigate();
+  const { tab = "tous" } = Route.useSearch();
+  const setTab = (t: string) => { setSt(""); nav({ to: "/agent-client", search: { tab: t }, replace: true }); };
+  const [q, setQ] = useState(""); const [city, setCity] = useState(""); const [st, setSt] = useState(""); const [pr, setPr] = useState(""); const [due, setDue] = useState("");
+  const [addQ, setAddQ] = useState(false);
+  const [viewQ, setViewQ] = useState<string | null>(null);
+  const [viewP, setViewP] = useState<string | null>(null);
+  const [follow, followEl] = useFollowDialog();
+  const [showDoc, docEl] = useDocViewer();
+  const cm = useMemo(() => new Map(s.clients.map((c) => [c.id, c])), [s.clients]);
+  const items = useMemo(() => buildActions(s).filter((i) => i.agent === "client"), [s.clients, s.quotes, s.payments, s.missing]); // eslint-disable-line react-hooks/exhaustive-deps
+  const okClient = (id: string, extra = "") => { const c = cm.get(id); return !!c && (!city || c.city === city) && (!q || norm(c.name + c.phone + c.id + extra).includes(norm(q))); };
+
+  const fItems = items.filter((i) => okClient(i.clientId) && (!st || i.status === st) && (!pr || i.priority === pr) && matchDue(i.next, due));
+  const fQuotes = s.quotes.filter((x) => okClient(x.clientId, x.id) && (!st || x.status === st) && matchDue(x.nextFollow, due));
+  const fPays = s.payments.filter((x) => okClient(x.clientId, x.contract) && (!st || payStatus(x) === st) && matchDue(x.nextFollow, due));
+  const fMiss = s.missing.filter((x) => okClient(x.clientId, x.info) && (!st || x.status === st) && matchDue(x.nextFollow, due));
+  const statusOpts = tab === "devis" ? QUOTE_STATUSES : tab === "paiements" ? PAY_STATUSES : tab === "infos" ? ["En attente", "Relancé", "Complété"] : [...new Set(items.map((i) => i.status))];
+
+  const quoteLines = (x: Quote) => { const c = cm.get(x.clientId)!; return [`Devis ${x.id}`, `Client : ${c.name} (${c.id})`, `Telephone : ${c.phone}`, `Produit : ${x.product}`, `Date : ${fmtFull(x.date)}`, `Montant : ${dh(x.amount)}`, `Statut : ${x.status}`, s.cabinet.name]; };
+  const ClientCell = ({ id }: { id: string }) => { const c = cm.get(id)!; return <Link to="/clients/$id" params={{ id }} onClick={(e) => e.stopPropagation()} className="font-semibold hover:text-primary">{c.name}<span className="block text-xs font-normal text-muted-foreground">{c.city}</span></Link>; };
+  const vq = s.quotes.find((x) => x.id === viewQ);
+  const vp = s.payments.find((x) => x.id === viewP);
+
   return (
-    <>
-      {!only && (
-        <div className="mb-5 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
-          {CATS.map((c, i) => {
-            const n = clients.filter((x) => x.category === c.id).length;
-            return (
-              <Card key={c.id} delay={i * 0.04} onClick={() => setCat(cat === c.id ? "" : c.id)} className={cn("cursor-pointer p-4 transition-all hover:-translate-y-0.5", cat === c.id && "border-primary/60 shadow-glow")}>
-                <c.icon className="h-5 w-5 text-primary" /><p className="mt-2 font-display text-2xl font-semibold"><Counter to={n} /></p><p className="text-xs text-muted-foreground">{c.id}</p>
-              </Card>
-            );
-          })}
-        </div>
-      )}
-      <div className="mb-3 flex flex-wrap gap-2">
-        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Rechercher un client…" className="h-9 rounded-xl border border-border bg-surface-2 px-3 text-sm outline-none" />
-        <Select label="Motif" value={cat} onChange={setCat} options={CATS.map((c) => c.id)} />
-        <Select label="Statut" value={status} onChange={setStatus} options={CLIENT_STATUSES} />
-        <Select label="Opérateur" value={op} onChange={setOp} options={OPERATORS} />
+    <Shell>
+      <PageHeader eyebrow="Agent IA" title="Agent IA — Suivi Client" subtitle="L’agent analyse devis, paiements, documents et dernières interactions pour identifier les relances à faire." actions={<Btn variant="primary" onClick={() => setAddQ(true)}><Plus className="h-4 w-4" />Ajouter un devis</Btn>} />
+      <RecoPanel title="Recommandations de l’Agent Suivi Client" recos={items.slice(0, 4).map((i) => ({ key: i.key, text: i.reco, urgent: i.priority === "Haute", onClick: () => nav({ to: "/clients/$id", params: { id: i.clientId } }) }))} />
+      <div className="mt-5 mb-4"><Tabs id="ac-tabs" value={tab} onChange={setTab} tabs={[
+        { id: "tous", label: "Tous", count: items.length },
+        { id: "devis", label: "Devis", count: s.quotes.filter((x) => x.status === "Envoyé" || x.status === "En attente").length },
+        { id: "paiements", label: "Paiements", count: s.payments.filter((x) => payStatus(x) !== "Payé").length },
+        { id: "infos", label: "Informations manquantes", count: s.missing.filter((x) => x.status !== "Complété").length },
+      ]} /></div>
+      <div className="mb-4 flex flex-wrap gap-2">
+        <div className="relative min-w-[220px] flex-1 md:max-w-xs"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><input className={cn(inputCls, "pl-9")} placeholder="Nom, téléphone, n° client…" value={q} onChange={(e) => setQ(e.target.value)} /></div>
+        <Sel label="Ville" value={city} onChange={setCity} options={CITIES} />
+        <Sel label="Statut" value={st} onChange={setSt} options={statusOpts} />
+        {tab === "tous" && <Sel label="Priorité" value={pr} onChange={setPr} options={["Haute", "Moyenne", "Basse"]} />}
+        <Sel label="Relance" value={due} onChange={setDue} options={["Aujourd’hui", "En retard", "7 prochains jours"]} />
       </div>
-      <Card className="overflow-x-auto">
-        <table className="w-full min-w-[1100px] text-sm">
-          <thead className="text-left text-[11px] uppercase tracking-wider text-muted-foreground"><tr>{["Client", "Téléphone", "Produit", "Motif de relance", "Dernière interaction", "Prochaine relance", "Priorité", "Opérateur", "Statut", ""].map((h) => <th key={h} className="px-4 py-3 font-medium">{h}</th>)}</tr></thead>
-          <tbody>
-            {rows.map((c, i) => (
-              <motion.tr key={c.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: Math.min(i, 15) * 0.02 }} onClick={() => openClient(c.id)} className="cursor-pointer border-t border-border hover:bg-accent/30">
-                <td className="px-4 py-3"><div className="flex items-center gap-2.5"><Avatar name={c.name} /><div><p className="font-medium">{c.name}</p><p className="text-xs text-muted-foreground">{c.type} · {c.city}</p></div></div></td>
-                <td className="px-4 py-3 tabular-nums text-muted-foreground">{c.phone}</td>
-                <td className="px-4 py-3">{c.product}</td>
-                <td className="max-w-[220px] px-4 py-3"><p className="truncate">{c.reason}</p><p className="text-xs text-muted-foreground">{c.category}</p></td>
-                <td className="px-4 py-3 tabular-nums text-muted-foreground">{fmt(c.lastInteraction)}</td>
-                <td className={cn("px-4 py-3 tabular-nums", c.nextFollow < TODAY && "text-destructive")}>{fmt(c.nextFollow)}</td>
-                <td className="px-4 py-3"><PriorityBadge p={c.priority} /></td>
-                <td className="px-4 py-3 text-muted-foreground">{c.operator}</td>
-                <td className="px-4 py-3"><StatusBadge s={c.status} /></td>
-                <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+
+      <Card className="overflow-hidden">
+        {tab === "tous" && <ActionsTable items={fItems} />}
+
+        {tab === "devis" && (
+          <Table head={["Client", "Téléphone", "N° devis", "Date devis", "Montant", "Statut", "Dernière relance", "Prochaine relance", "Document", ""]} empty={!fQuotes.length}>
+            {fQuotes.map((x) => (
+              <tr key={x.id} className={rowCls} onClick={() => setViewQ(x.id)}>
+                <td className={td}><ClientCell id={x.clientId} /></td>
+                <td className={td}><Phone n={cm.get(x.clientId)!.phone} /></td>
+                <td className={cn(td, "font-mono text-xs")}>{x.id}<span className="block font-sans text-muted-foreground">{x.product}</span></td>
+                <td className={td}>{fmt(x.date)}</td>
+                <td className={cn(td, "whitespace-nowrap font-semibold")}>{dh(x.amount)}</td>
+                <td className={td}><Badge s={x.status} /></td>
+                <td className={td}>{fmt(x.lastFollow)}</td>
+                <td className={td}><NextDate d={x.nextFollow} /></td>
+                <td className={td}><span className="inline-flex items-center gap-1 text-xs text-muted-foreground"><FileText className="h-3.5 w-3.5 text-destructive" />PDF</span></td>
+                <td className={td} onClick={(e) => e.stopPropagation()}>
                   <div className="flex gap-1">
-                    <Button size="icon" variant="soft" title="Appeler" onClick={() => startCall({ ref: c.id, who: c.name, role: "client", phone: c.phone })}><Phone className="h-4 w-4" /></Button>
-                    <Button size="icon" variant="ghost" title="WhatsApp" onClick={() => message(c.id, "whatsapp", c.name)}><MessageCircle className="h-4 w-4" /></Button>
-                    <Button size="icon" variant="ghost" title="Email" onClick={() => message(c.id, "email", c.name)}><Mail className="h-4 w-4" /></Button>
-                    <Button size="icon" variant="ghost" title="Voir fiche" onClick={() => openClient(c.id)}><Eye className="h-4 w-4" /></Button>
-                    <PostponeButton refId={c.id} />
-                    <Button size="icon" variant="success" title="Marquer comme résolu" onClick={() => resolve(c.id)}><Check className="h-4 w-4" /></Button>
+                    <Btn size="icon" variant="ghost" title="Voir" onClick={() => showDoc({ name: x.doc, lines: quoteLines(x) })}><Eye className="h-4 w-4" /></Btn>
+                    <Btn size="icon" variant="ghost" title="Télécharger" onClick={() => downloadMock(x.doc, quoteLines(x))}><Download className="h-4 w-4" /></Btn>
+                    <Btn size="sm" variant="soft" onClick={() => follow({ title: `Relance devis ${x.id}`, subtitle: cm.get(x.clientId)!.name, results: QUOTE_RESULTS, onSave: (f) => s.followQuote(x.id, f) })}><History className="h-3.5 w-3.5" />Relance</Btn>
                   </div>
                 </td>
-              </motion.tr>
+              </tr>
             ))}
-          </tbody>
-        </table>
+          </Table>
+        )}
+
+        {tab === "paiements" && (
+          <Table head={["Client", "Téléphone", "Contrat", "Montant", "Échéance", "Payé / Reste", "Statut", "Dernière relance", "Prochaine relance", ""]} empty={!fPays.length}>
+            {fPays.map((x) => { const ps = payStatus(x); return (
+              <tr key={x.id} className={rowCls} onClick={() => setViewP(x.id)}>
+                <td className={td}><ClientCell id={x.clientId} /></td>
+                <td className={td}><Phone n={cm.get(x.clientId)!.phone} /></td>
+                <td className={cn(td, "font-mono text-xs")}>{x.contract}</td>
+                <td className={cn(td, "whitespace-nowrap font-semibold")}>{dh(x.amount)}</td>
+                <td className={cn(td, diffDays(x.due) < 0 && ps !== "Payé" && "font-semibold text-destructive")}>{fmt(x.due)}</td>
+                <td className={cn(td, "min-w-[170px]")}><ProgressBar value={(x.paid / x.amount) * 100} /><p className="mt-1 text-xs"><span className="text-success">{dh(x.paid)}</span> · <span className="text-muted-foreground">reste {dh(x.amount - x.paid)}</span></p></td>
+                <td className={td}><Badge s={ps} /></td>
+                <td className={td}>{fmt(x.lastFollow)}</td>
+                <td className={td}><NextDate d={x.nextFollow} /></td>
+                <td className={td} onClick={(e) => e.stopPropagation()}>{ps !== "Payé" && <Btn size="sm" variant="soft" onClick={() => follow({ title: `Relance paiement ${x.contract}`, subtitle: cm.get(x.clientId)!.name, results: PAY_RESULTS, onSave: (f) => s.followPayment(x.id, f) })}><History className="h-3.5 w-3.5" />Relance</Btn>}</td>
+              </tr>
+            ); })}
+          </Table>
+        )}
+
+        {tab === "infos" && (
+          <Table head={["Client", "Téléphone", "Information manquante", "Depuis", "Dernière relance", "Prochaine relance", "Statut", ""]} empty={!fMiss.length}>
+            {fMiss.map((x) => (
+              <tr key={x.id} className={cn(x.status === "Complété" && "opacity-60")}>
+                <td className={td}><ClientCell id={x.clientId} /></td>
+                <td className={td}><Phone n={cm.get(x.clientId)!.phone} /></td>
+                <td className={cn(td, "font-medium")}>{x.info}</td>
+                <td className={td}>{-diffDays(x.since)} jours</td>
+                <td className={td}>{fmt(x.lastFollow)}</td>
+                <td className={td}><NextDate d={x.nextFollow} /></td>
+                <td className={td}><Badge s={x.status} /></td>
+                <td className={td}>{x.status !== "Complété" && <div className="flex gap-1">
+                  <Btn size="sm" variant="ghost" onClick={() => follow({ title: `Relance : ${x.info}`, subtitle: cm.get(x.clientId)!.name, results: MISSING_RESULTS, onSave: (f) => s.followMissing(x.id, f) })}><History className="h-3.5 w-3.5" />Relance</Btn>
+                  <Btn size="sm" variant="success" onClick={() => { s.markReceived(x.id); toast.success(`${x.info.replace(/ manquante?| incorrecte/, "")} reçu(e) — dossier complété`); }}><CheckCircle2 className="h-3.5 w-3.5" />Marquer comme reçu</Btn>
+                </div>}</td>
+              </tr>
+            ))}
+          </Table>
+        )}
       </Card>
-    </>
+
+      <QuoteDialog open={addQ} onClose={() => setAddQ(false)} />
+      <Modal open={!!vq} onClose={() => setViewQ(null)} title={`Devis ${vq?.id ?? ""}`} description={vq ? `${cm.get(vq.clientId)?.name} · ${vq.product}` : ""}>
+        {vq && <>
+          <div className="grid grid-cols-2 gap-3 rounded-xl bg-surface-2 p-4 text-sm">
+            <p><span className="text-muted-foreground">Montant</span><br /><b>{dh(vq.amount)}</b></p>
+            <p><span className="text-muted-foreground">Date</span><br /><b>{fmtFull(vq.date)}</b></p>
+            <p><span className="text-muted-foreground">Téléphone client</span><br /><Phone n={cm.get(vq.clientId)!.phone} /></p>
+            <Field label="Statut"><select className={inputCls} value={vq.status} onChange={(e) => { s.setQuoteStatus(vq.id, e.target.value as QuoteStatus); toast.success("Statut mis à jour"); }}>{QUOTE_STATUSES.map((x) => <option key={x}>{x}</option>)}</select></Field>
+          </div>
+          <Timeline events={vq.history} />
+          <div className="flex flex-wrap justify-end gap-2">
+            <Btn onClick={() => showDoc({ name: vq.doc, lines: quoteLines(vq) })}><Eye className="h-4 w-4" />Voir</Btn>
+            <Btn onClick={() => downloadMock(vq.doc, quoteLines(vq))}><Download className="h-4 w-4" />Télécharger</Btn>
+            <Btn variant="primary" onClick={() => follow({ title: `Relance devis ${vq.id}`, results: QUOTE_RESULTS, onSave: (f) => s.followQuote(vq.id, f) })}>Ajouter une relance</Btn>
+          </div>
+        </>}
+      </Modal>
+      <PaymentModal id={vp?.id} onClose={() => setViewP(null)} onFollow={(id) => follow({ title: "Relance paiement", results: PAY_RESULTS, onSave: (f) => s.followPayment(id, f) })} />
+      {followEl}{docEl}
+    </Shell>
   );
 }
 
-function AgentClient() {
+export function PaymentModal({ id, onClose, onFollow }: { id?: string; onClose: () => void; onFollow: (id: string) => void }) {
+  const s = useStore();
+  const [amt, setAmt] = useState("");
+  const p = s.payments.find((x) => x.id === id);
+  const c = p && s.clients.find((x) => x.id === p.clientId);
   return (
-    <Shell>
-      <PageHeader title="Agent IA — Suivi Client" subtitle="Identifie automatiquement les clients et prospects nécessitant une relance.">
-        <span className="flex items-center gap-2 rounded-full border border-success/30 bg-success/10 px-3 py-1.5 text-xs font-semibold text-success"><Pulse />Agent actif · 245 dossiers analysés</span>
-        <Button variant="primary" size="sm"><Bot className="h-4 w-4" />Relancer l’analyse</Button>
-      </PageHeader>
-      <ClientFollowTable />
-    </Shell>
+    <Modal open={!!p} onClose={onClose} title={`Paiement ${p?.contract ?? ""}`} description={c ? `${c.name} · ${c.phone}` : ""}>
+      {p && <>
+        <div className="rounded-xl bg-surface-2 p-4">
+          <div className="mb-2 flex items-center justify-between"><Badge s={payStatus(p)} /><span className="text-xs text-muted-foreground">Échéance {fmtFull(p.due)}</span></div>
+          <ProgressBar value={(p.paid / p.amount) * 100} className="h-3" />
+          <div className="mt-3 grid grid-cols-3 gap-2 text-sm"><p>Total<br /><b>{dh(p.amount)}</b></p><p>Payé<br /><b className="text-success">{dh(p.paid)}</b></p><p>Reste<br /><b className="text-destructive">{dh(p.amount - p.paid)}</b></p></div>
+        </div>
+        <div><p className="mb-2 text-sm font-semibold">Timeline de suivi</p><Timeline events={p.timeline} /></div>
+        {p.paid < p.amount && <div className="flex flex-wrap items-end gap-2">
+          <Field label="Enregistrer un paiement (DH)" className="flex-1"><input type="number" className={inputCls} value={amt} onChange={(e) => setAmt(e.target.value)} placeholder={String(p.amount - p.paid)} /></Field>
+          <Btn variant="success" onClick={() => { const n = Number(amt || p.amount - p.paid); s.addPayment(p.id, n); setAmt(""); toast.success(`Paiement de ${dh(n)} enregistré`); }}>Enregistrer</Btn>
+          <Btn variant="primary" onClick={() => onFollow(p.id)}>Ajouter une relance</Btn>
+        </div>}
+      </>}
+    </Modal>
   );
 }
