@@ -44,7 +44,7 @@ export function Phone({ n, label, className }: { n: string; label?: string; clas
   return (
     <span className={cn("inline-flex items-center gap-1.5 text-[13px]", className)}>
       <PhoneIcon className="h-3.5 w-3.5 shrink-0 text-primary" />
-      <span className="font-mono font-semibold tabular-nums text-foreground">{n}</span>
+      <span className="whitespace-nowrap font-mono font-semibold tabular-nums text-foreground">{n}</span>
       {label && <span className="truncate text-xs text-muted-foreground">· {label}</span>}
     </span>
   );
