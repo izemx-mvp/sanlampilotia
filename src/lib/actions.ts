@@ -1,7 +1,7 @@
 // "AI agents": rule-based analysis of mock data that surfaces the follow-ups to do.
 import type { Claim, Priority } from "./data";
 import { diffDays, dh, fmt, payStatus } from "./data";
-import type { State } from "./store";
+import type { State, PartnerKind } from "./store";
 
 export type Kind = "Devis" | "Paiement" | "Info manquante" | "Sinistre";
 export interface ActionItem {
@@ -88,3 +88,8 @@ export function kpis(s: Pick<State, "quotes" | "payments">, items: ActionItem[])
     garages: items.filter((i) => i.target === "Garage").length,
   };
 }
+
+export const partnerLoad = (claims: Claim[], kind: PartnerKind, id: string) => {
+  const mine = claims.filter((c) => (kind === "expert" ? c.expertId : c.garageId) === id);
+  const done = mine.filter((c) => (kind === "expert" ? c.expertStatus === "Rapport reçu" : c.garageStatus === "Véhicule prêt") || c.status === "Clôturé");
+  return { mine, current: mine.length - done.length, done: done.length };

@@ -6,16 +6,13 @@ import { Shell } from "@/components/app/Shell";
 import { Badge, Btn, Card, PageHeader, Phone, Sel, Table, Tabs, inputCls, rowCls, td } from "@/components/app/ui";
 import { Confirm, ImportDialog, PartnerDialog } from "@/components/app/dialogs";
 import { useStore, type PartnerKind } from "@/lib/store";
-import { CITIES, norm, type Claim, type Expert, type Garage } from "@/lib/data";
+import { partnerLoad } from "@/lib/actions";
+import { CITIES, norm, type Expert, type Garage } from "@/lib/data";
 import { pageHead } from "@/lib/head";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/intervenants")({ head: pageHead("Experts & Garagistes", "Gérez vos experts et garages partenaires : ajout, modification, import Excel / CSV."), component: Partners });
 
-export const partnerLoad = (claims: Claim[], kind: PartnerKind, id: string) => {
-  const mine = claims.filter((c) => (kind === "expert" ? c.expertId : c.garageId) === id);
-  const done = mine.filter((c) => (kind === "expert" ? c.expertStatus === "Rapport reçu" : c.garageStatus === "Véhicule prêt") || c.status === "Clôturé");
-  return { mine, current: mine.length - done.length, done: done.length };
 };
 
 function Partners() {

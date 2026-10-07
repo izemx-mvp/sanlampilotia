@@ -1,43 +1,88 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
+import { Building2, Car, CreditCard, Database, FileSpreadsheet, FileText, FolderOpen, Upload, UserRoundCheck, Users, Wrench } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Shell } from "@/components/app/Shell";
-import { Button, Card, PageHeader } from "@/components/app/ui";
-import { cn } from "@/lib/utils";
+import { Badge, Btn, Card, Field, PageHeader, Tabs, inputCls } from "@/components/app/ui";
+import { Switch } from "@/components/ui/switch";
+import { useStore } from "@/lib/store";
+import type { Cabinet, Rule } from "@/lib/data";
 import { pageHead } from "@/lib/head";
 
-export const Route = createFileRoute("/parametres")({ head: pageHead("Paramètres", "Réglages des Agents IA, sources de données et notifications."), component: Parametres });
+export const Route = createFileRoute("/parametres")({ head: pageHead("Paramètres", "Informations du cabinet, données disponibles et configuration des relances."), component: Settings });
 
-function Toggle({ on, set }: { on: boolean; set: (b: boolean) => void }) {
-  return <button onClick={() => set(!on)} className={cn("relative h-6 w-11 rounded-full transition-colors", on ? "bg-primary" : "bg-muted")}><span className={cn("absolute top-0.5 h-5 w-5 rounded-full bg-foreground transition-all", on ? "left-[22px]" : "left-0.5")} /></button>;
-}
-
-function Parametres() {
-  const [s, setS] = useState({ auto: true, wa: true, email: true, digest: false, sinistre: true });
-  const [delay, setDelay] = useState(48);
-  const row = (k: keyof typeof s, l: string, d: string) => <div className="flex items-center justify-between gap-4 py-3"><div><p className="text-sm font-medium">{l}</p><p className="text-xs text-muted-foreground">{d}</p></div><Toggle on={s[k]} set={(b) => setS({ ...s, [k]: b })} /></div>;
+function Settings() {
+  const [tab, setTab] = useState("cabinet");
   return (
     <Shell>
-      <PageHeader title="Paramètres" subtitle="Configurez le comportement de vos Agents IA."><Link to="/login"><Button size="sm" variant="ghost">Se déconnecter</Button></Link></PageHeader>
-      <div className="grid max-w-4xl gap-5 lg:grid-cols-2">
-        <Card className="divide-y divide-border p-5">
-          <h3 className="pb-2 font-semibold">Agents IA</h3>
-          {row("auto", "Relances automatiques", "L’agent envoie les rappels de faible priorité sans validation.")}
-          {row("sinistre", "Analyse sinistres en continu", "Synchronisation toutes les 15 minutes.")}
-          <div className="py-3"><p className="text-sm font-medium">Délai avant relance prospect : {delay} h</p><input type="range" min={12} max={120} step={12} value={delay} onChange={(e) => setDelay(+e.target.value)} className="mt-2 w-full accent-primary" /></div>
-        </Card>
-        <Card className="divide-y divide-border p-5">
-          <h3 className="pb-2 font-semibold">Canaux & notifications</h3>
-          {row("wa", "WhatsApp", "Autoriser les relances WhatsApp.")}
-          {row("email", "Email", "Autoriser les relances email.")}
-          {row("digest", "Résumé quotidien", "Recevoir un récapitulatif à 8h.")}
-        </Card>
-        <Card className="p-5 lg:col-span-2">
-          <h3 className="mb-3 font-semibold">Sources de données connectées</h3>
-          <div className="grid gap-3 md:grid-cols-3">{["Outil clients & prospects", "Outil sinistres SANLAM", "Fichier Excel de suivi (import)"].map((x) => <div key={x} className="flex items-center justify-between rounded-xl border border-border bg-surface-2 p-3 text-sm">{x}<span className="text-xs text-success">● Synchronisé</span></div>)}</div>
-        </Card>
-      </div>
-      <Button variant="primary" className="mt-5" onClick={() => toast.success("Paramètres enregistrés")}>Enregistrer</Button>
+      <PageHeader eyebrow="Configuration" title="Paramètres" />
+      <div className="mb-5"><Tabs id="set-tabs" value={tab} onChange={setTab} tabs={[{ id: "cabinet", label: "Informations du cabinet" }, { id: "data", label: "Données disponibles" }, { id: "rules", label: "Configuration des relances" }]} /></div>
+      {tab === "cabinet" && <CabinetForm />}
+      {tab === "data" && <DataView />}
+      {tab === "rules" && <RulesView />}
     </Shell>
   );
+}
+
+function CabinetForm() {
+  const { cabinet, setCabinet } = useStore();
+  const [edit, setEdit] = useState(false);
+  const [f, setF] = useState<Cabinet>(cabinet);
+  const F: [keyof Cabinet, string][] = [["name", "Nom du cabinet"], ["manager", "Responsable"], ["address", "Adresse"], ["city", "Ville"], ["phone", "Téléphone"], ["email", "Email"], ["ice", "Numéro d’identification (ICE)"]];
+  return (
+    <Card className="max-w-3xl p-6">
+      <div className="mb-5 flex items-center gap-4">
+        <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-2xl bg-accent">{f.logo ? <img src={f.logo} alt="Logo du cabinet" className="h-full w-full object-cover" /> : <Building2 className="h-7 w-7 text-primary" />}</div>
+        <div className="flex-1"><p className="font-display text-lg font-semibold">{f.name}</p><p className="text-sm text-muted-foreground">{f.city}</p></div>
+        {edit && <label className="inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-xl border border-border px-3 text-sm hover:bg-muted"><Upload className="h-4 w-4" />Logo<input type="file" accept="image/*" className="hidden" onChange={(e) => { const file = e.target.files?.[0]; if (!file) return; const r = new FileReader(); r.onload = () => setF({ ...f, logo: String(r.result) }); r.readAsDataURL(file); }} /></label>}
+      </div>
+      <div className="grid gap-4 sm:grid-cols-2">{F.map(([k, l]) => <Field key={k} label={l}><input disabled={!edit} className={inputCls} value={f[k] ?? ""} onChange={(e) => setF({ ...f, [k]: e.target.value })} /></Field>)}</div>
+      <div className="mt-6 flex justify-end gap-2">
+        {!edit ? <Btn variant="primary" onClick={() => setEdit(true)}>Modifier</Btn> : <><Btn onClick={() => { setF(cabinet); setEdit(false); }}>Annuler</Btn><Btn variant="primary" onClick={() => { setCabinet(f); setEdit(false); toast.success("Informations du cabinet enregistrées"); }}>Enregistrer</Btn></>}
+      </div>
+    </Card>
+  );
+}
+
+function DataView() {
+  const cards = [["Clients", 245, Users], ["Devis", 82, FileText], ["Paiements", 196, CreditCard], ["Sinistres", 74, Car], ["Experts", 18, UserRoundCheck], ["Garages", 32, Wrench], ["Documents", 458, FolderOpen]] as const;
+  return (
+    <>
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-7">
+        {cards.map(([l, v, I], i) => <Card key={l} delay={i * 0.03} className="p-4"><I className="h-5 w-5 text-primary" /><p className="mt-3 font-display text-3xl font-semibold">{v}</p><p className="text-sm text-muted-foreground">{l}</p></Card>)}
+      </div>
+      <h2 className="mb-3 mt-6 text-lg font-semibold">Sources de données</h2>
+      <div className="grid gap-3 md:grid-cols-3">
+        {([["Gestion clients", "Connecté", Database], ["Gestion sinistres", "Connecté", Database], ["Import Excel", "Actif", FileSpreadsheet]] as const).map(([l, st, I]) => (
+          <Card key={l} className="flex items-center gap-3 p-4"><span className="flex h-10 w-10 items-center justify-center rounded-xl bg-success/12 text-success"><I className="h-5 w-5" /></span><div className="flex-1"><p className="font-semibold">{l}</p><p className="text-xs text-muted-foreground">Synchronisé aujourd’hui</p></div><Badge s={st} /></Card>
+        ))}
+      </div>
+    </>
+  );
+}
+
+function RuleCard({ rule }: { rule: Rule }) {
+  const { setRule } = useStore();
+  const [r, setR] = useState(rule);
+  return (
+    <Card className="p-5">
+      <div className="mb-3 flex items-center justify-between"><h3 className="font-display text-lg font-semibold">{r.title}</h3><label className="flex items-center gap-2 text-sm">{r.enabled ? "Relances activées" : "Désactivées"}<Switch checked={r.enabled} onCheckedChange={(v) => setR({ ...r, enabled: v })} /></label></div>
+      <p className="mb-4 text-xs text-muted-foreground">Condition : {r.condition}</p>
+      <div className={r.enabled ? "space-y-3" : "pointer-events-none space-y-3 opacity-50"}>
+        {r.steps.map((st, i) => (
+          <div key={i} className="flex flex-wrap items-center gap-2 rounded-xl bg-surface-2 p-3 text-sm">
+            <span className="flex-1 font-medium">{st.label}</span>
+            <input type="number" min={1} className={`${inputCls} w-20`} value={st.value} onChange={(e) => setR({ ...r, steps: r.steps.map((x, j) => (j === i ? { ...x, value: Number(e.target.value) } : x)) })} />
+            <select className={`${inputCls} w-28`} value={st.unit} onChange={(e) => setR({ ...r, steps: r.steps.map((x, j) => (j === i ? { ...x, unit: e.target.value as "Jour" | "Heure" } : x)) })}><option>Jour</option><option>Heure</option></select>
+          </div>
+        ))}
+      </div>
+      <div className="mt-4 flex justify-end"><Btn variant="primary" onClick={() => { setRule(r); toast.success(`Règles « ${r.title} » enregistrées`); }}>Enregistrer</Btn></div>
+    </Card>
+  );
+}
+
+function RulesView() {
+  const { rules } = useStore();
+  return <div className="grid gap-5 lg:grid-cols-2">{rules.map((r) => <RuleCard key={r.key} rule={r} />)}</div>;
 }
