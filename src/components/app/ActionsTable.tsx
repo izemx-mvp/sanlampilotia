@@ -15,7 +15,7 @@ export function ActionsTable({ items }: { items: ActionItem[] }) {
           <td className={td}>
             <div className="flex items-center gap-3"><Avatar name={i.clientName} /><div className="min-w-0"><p className="font-semibold">{i.clientName}</p><Phone n={i.contact.phone} label={i.target !== "Client" ? i.contact.name : undefined} /></div></div>
           </td>
-          <td className={td}><span className={cn("rounded-md px-2 py-0.5 text-xs font-semibold", KIND[i.kind])}>{i.kind}{i.target !== "Client" ? ` · ${i.target}` : ""}</span></td>
+          <td className={td}><span className={cn("whitespace-nowrap rounded-md px-2 py-0.5 text-xs font-semibold", KIND[i.kind])}>{i.kind}{i.target !== "Client" ? ` · ${i.target}` : ""}</span></td>
           <td className={cn(td, "min-w-[220px]")}><p className="font-medium">{i.motif}</p>{i.claimId && <p className="text-xs text-muted-foreground">{i.claimId}</p>}</td>
           <td className={cn(td, "whitespace-nowrap text-muted-foreground")}>{i.lastLabel}</td>
           <td className={td}><NextDate d={i.next} /></td>

@@ -14,7 +14,7 @@ import { pageHead } from "@/lib/head";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/agent-client")({
-  validateSearch: (s: Record<string, unknown>): { tab?: string } => ({ tab: typeof s.tab === "string" ? s.tab : undefined }),
+  validateSearch: (s: Record<string, unknown>): { tab?: string } => ({ tab: typeof s["tab"] === "string" ? (s["tab"] as string) : undefined }),
   head: pageHead("Agent IA — Suivi Client", "Devis, paiements et informations manquantes : les relances clients identifiées automatiquement."),
   component: AgentClient,
 });

@@ -16,6 +16,8 @@ import { Route as AnalyticsRouteImport } from './routes/analytics'
 import { Route as IntervenantsRouteImport } from './routes/intervenants'
 import { Route as ParametresRouteImport } from './routes/parametres'
 import { Route as ClientsIdRouteImport } from './routes/clients.$id'
+import { Route as ExpertsIdRouteImport } from './routes/experts.$id'
+import { Route as GaragesIdRouteImport } from './routes/garages.$id'
 import { Route as SinistresIdRouteImport } from './routes/sinistres.$id'
 
 const IndexRoute = IndexRouteImport.update({
@@ -53,6 +55,16 @@ const ClientsIdRoute = ClientsIdRouteImport.update({
   path: '/clients/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ExpertsIdRoute = ExpertsIdRouteImport.update({
+  id: '/experts/$id',
+  path: '/experts/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GaragesIdRoute = GaragesIdRouteImport.update({
+  id: '/garages/$id',
+  path: '/garages/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SinistresIdRoute = SinistresIdRouteImport.update({
   id: '/sinistres/$id',
   path: '/sinistres/$id',
@@ -67,6 +79,8 @@ export interface FileRoutesByFullPath {
   '/intervenants': typeof IntervenantsRoute
   '/parametres': typeof ParametresRoute
   '/clients/$id': typeof ClientsIdRoute
+  '/experts/$id': typeof ExpertsIdRoute
+  '/garages/$id': typeof GaragesIdRoute
   '/sinistres/$id': typeof SinistresIdRoute
 }
 export interface FileRoutesByTo {
@@ -77,6 +91,8 @@ export interface FileRoutesByTo {
   '/intervenants': typeof IntervenantsRoute
   '/parametres': typeof ParametresRoute
   '/clients/$id': typeof ClientsIdRoute
+  '/experts/$id': typeof ExpertsIdRoute
+  '/garages/$id': typeof GaragesIdRoute
   '/sinistres/$id': typeof SinistresIdRoute
 }
 export interface FileRoutesById {
@@ -88,6 +104,8 @@ export interface FileRoutesById {
   '/intervenants': typeof IntervenantsRoute
   '/parametres': typeof ParametresRoute
   '/clients/$id': typeof ClientsIdRoute
+  '/experts/$id': typeof ExpertsIdRoute
+  '/garages/$id': typeof GaragesIdRoute
   '/sinistres/$id': typeof SinistresIdRoute
 }
 export interface FileRouteTypes {
@@ -100,6 +118,8 @@ export interface FileRouteTypes {
     | '/intervenants'
     | '/parametres'
     | '/clients/$id'
+    | '/experts/$id'
+    | '/garages/$id'
     | '/sinistres/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -110,6 +130,8 @@ export interface FileRouteTypes {
     | '/intervenants'
     | '/parametres'
     | '/clients/$id'
+    | '/experts/$id'
+    | '/garages/$id'
     | '/sinistres/$id'
   id:
     | '__root__'
@@ -120,6 +142,8 @@ export interface FileRouteTypes {
     | '/intervenants'
     | '/parametres'
     | '/clients/$id'
+    | '/experts/$id'
+    | '/garages/$id'
     | '/sinistres/$id'
   fileRoutesById: FileRoutesById
 }
@@ -131,6 +155,8 @@ export interface RootRouteChildren {
   IntervenantsRoute: typeof IntervenantsRoute
   ParametresRoute: typeof ParametresRoute
   ClientsIdRoute: typeof ClientsIdRoute
+  ExpertsIdRoute: typeof ExpertsIdRoute
+  GaragesIdRoute: typeof GaragesIdRoute
   SinistresIdRoute: typeof SinistresIdRoute
 }
 
@@ -185,6 +211,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ClientsIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/experts/$id': {
+      id: '/experts/$id'
+      path: '/experts/$id'
+      fullPath: '/experts/$id'
+      preLoaderRoute: typeof ExpertsIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/garages/$id': {
+      id: '/garages/$id'
+      path: '/garages/$id'
+      fullPath: '/garages/$id'
+      preLoaderRoute: typeof GaragesIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/sinistres/$id': {
       id: '/sinistres/$id'
       path: '/sinistres/$id'
@@ -203,6 +243,8 @@ const rootRouteChildren: RootRouteChildren = {
   IntervenantsRoute: IntervenantsRoute,
   ParametresRoute: ParametresRoute,
   ClientsIdRoute: ClientsIdRoute,
+  ExpertsIdRoute: ExpertsIdRoute,
+  GaragesIdRoute: GaragesIdRoute,
   SinistresIdRoute: SinistresIdRoute,
 }
 export const routeTree = rootRouteImport
